@@ -1,0 +1,249 @@
+:root {
+  /* Color Palette */
+  --bg-cream: #FFFFF8;
+  --primary-green: #2A623C;
+  --secondary-gray: #80807C;
+  --text-black: #000000;
+  --white: #FFFFFF;
+  
+  /* Typography */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  color: var(--text-black);
+  background-color: var(--bg-cream);
+  
+  /* Spacing Scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.4rem;
+  --space-md: 0.5rem;
+  --space-lg: 0.75rem;
+  --space-xl: 1.2rem;
+  --space-xxl: 2rem;
+  
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-cream);
+  color: var(--text-black);
+}
+
+/* Typography Hierarchy */
+h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: var(--space-md);
+}
+
+h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: var(--space-sm);
+}
+
+h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: var(--space-sm);
+}
+
+p {
+  margin-bottom: var(--space-md);
+}
+
+/* Button Components */
+button {
+  background-color: var(--white);
+  color: var(--text-black);
+  border: 1px solid var(--text-black);
+  border-radius: 8px;
+  padding: var(--space-xs) var(--space-lg);
+  font-weight: 500;
+  font-size: 0.875rem;
+  min-height: 28px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+button:hover {
+  background-color: var(--bg-cream);
+  border-color: var(--primary-green);
+  color: var(--primary-green);
+}
+
+button:active,
+button:focus {
+  background-color: var(--text-black);
+  color: var(--white);
+  outline: none;
+}
+
+/* Download/Action Button Variant */
+button.download {
+  background-color: var(--white);
+  color: var(--primary-green);
+  border: 1px solid var(--primary-green);
+}
+
+button.download:hover {
+  background-color: var(--primary-green);
+  color: var(--white);
+}
+
+/* Input Fields */
+input {
+  max-width: 240px;
+  background-color: var(--white);
+  border: 1px solid #E5E5E5;
+  border-radius: 6px;
+  padding: var(--space-xs) var(--space-md);
+  font-size: 0.875rem;
+  color: var(--text-black);
+  font-family: inherit;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--primary-green);
+}
+
+/* Cards */
+.card {
+  background-color: var(--white);
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  padding: var(--space-lg);
+  box-shadow: none;
+}
+
+/* Metrics/Stats Cards */
+.metric-card {
+  background-color: var(--white);
+  border: 1px solid #E5E5E5;
+  border-radius: 6px;
+  padding: var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+
+/* Navigation Tabs */
+.nav-tabs {
+  border-bottom: 1px solid var(--secondary-gray);
+  background-color: transparent;
+  display: flex;
+}
+
+.nav-tab {
+  width: 140px;
+  padding: var(--space-md) var(--space-lg);
+  border: none;
+  background: transparent;
+  color: var(--text-black);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-tab.active {
+  border-bottom-color: var(--primary-green);
+  color: var(--primary-green);
+}
+
+/* Data Tables */
+.data-table {
+  background-color: var(--white);
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-md);
+  text-align: left;
+  border-bottom: 1px solid #E5E5E5;
+}
+
+.data-table th {
+  font-weight: 600;
+  background-color: #F9F9F9;
+}
+
+/* Negative Numbers (Red) */
+.negative {
+  color: #DC2626;
+}
+
+.negative::before {
+  content: "(";
+}
+
+.negative::after {
+  content: ")";
+}
+
+/* Links */
+a {
+  font-weight: 500;
+  color: var(--text-black);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--primary-green);
+}
+
+/* Utility Classes */
+.container {
+  padding: var(--space-xl) var(--space-xxl);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.gap-sm {
+  gap: var(--space-sm);
+}
+
+.gap-md {
+  gap: var(--space-md);
+}
+
+.gap-lg {
+  gap: var(--space-lg);
+}
+
+.mb-sm {
+  margin-bottom: var(--space-sm);
+}
+
+.mb-md {
+  margin-bottom: var(--space-md);
+}
+
+.mb-lg {
+  margin-bottom: var(--space-lg);
+}

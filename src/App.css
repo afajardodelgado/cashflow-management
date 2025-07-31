@@ -1,0 +1,29 @@
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .container {
+    padding: var(--space-lg) var(--space-lg);
+  }
+  
+  .nav-tabs {
+    flex-wrap: wrap;
+  }
+  
+  .nav-tab {
+    width: auto;
+    flex: 1;
+    min-width: 100px;
+  }
+  
+  .flex {
+    flex-direction: column;
+  }
+  
+  input {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .card {
+    padding: var(--space-md);
+  }
+}

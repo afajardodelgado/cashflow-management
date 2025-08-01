@@ -14,6 +14,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('inputs')
   const [chartType, setChartType] = useState('line')
   const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0)
+  const [showHelpModal, setShowHelpModal] = useState(false)
 
   // Load data from sessionStorage on component mount
   useEffect(() => {
@@ -550,91 +551,6 @@ function App() {
     }
   }
 
-  // Financial Health Analysis
-  const getFinancialHealthAnalysis = () => {
-    const cashflowData = calculateCashflow(projectionDays)
-    const flowBreakdown = getFlowBreakdownData()
-    
-    const alerts = []
-    const suggestions = []
-    let healthScore = 100
-    let healthStatus = 'excellent'
-    
-    // Check for negative balance in next 7 days
-    const next7Days = cashflowData.slice(0, 7)
-    const willGoNegative = next7Days.some(day => day.runningBalance < 0)
-    const daysUntilNegative = cashflowData.findIndex(day => day.runningBalance < 0)
-    
-    if (willGoNegative) {
-      alerts.push({
-        type: 'danger',
-        title: 'Cash Flow Warning',
-        message: `You may run out of money in ${daysUntilNegative + 1} days`,
-        icon: '⚠️'
-      })
-      suggestions.push('Consider delaying non-essential expenses or increasing income')
-      healthScore -= 40
-      healthStatus = 'poor'
-    }
-    
-    // Check savings rate
-    const savingsRate = flowBreakdown.totalIncome > 0 ? 
-      ((flowBreakdown.totalIncome - flowBreakdown.totalExpenses) / flowBreakdown.totalIncome * 100) : 0
-    
-    if (savingsRate < 0) {
-      alerts.push({
-        type: 'danger',
-        title: 'Spending Exceeds Income',
-        message: `You're spending ${Math.abs(savingsRate).toFixed(1)}% more than you earn`,
-        icon: '💸'
-      })
-      healthScore -= 30
-    } else if (savingsRate < 10) {
-      alerts.push({
-        type: 'warning',
-        title: 'Low Savings Rate',
-        message: `Your savings rate is ${savingsRate.toFixed(1)}%. Aim for 10-20%`,
-        icon: '💰'
-      })
-      suggestions.push('Try the 50/30/20 rule: 50% needs, 30% wants, 20% savings')
-      healthScore -= 20
-      healthStatus = healthScore >= 70 ? 'fair' : 'poor'
-    } else if (savingsRate >= 20) {
-      alerts.push({
-        type: 'success',
-        title: 'Excellent Savings Rate',
-        message: `Great job! You're saving ${savingsRate.toFixed(1)}% of your income`,
-        icon: '🎉'
-      })
-      healthStatus = 'excellent'
-    }
-    
-    // Check for irregular income/expense patterns
-    const hasIrregularExpenses = oneTimeExpenses.length > 0
-    if (hasIrregularExpenses) {
-      const totalOneTime = oneTimeExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0)
-      if (totalOneTime > flowBreakdown.totalIncome * 0.1) {
-        suggestions.push('Consider setting aside money monthly for irregular expenses')
-      }
-    }
-    
-    // Positive reinforcement
-    if (alerts.length === 0 || alerts.every(alert => alert.type === 'success')) {
-      alerts.push({
-        type: 'success',
-        title: 'Financial Health Looks Good',
-        message: 'Your cash flow is stable and well-managed',
-        icon: '✅'
-      })
-    }
-    
-    return {
-      alerts,
-      suggestions,
-      healthScore: Math.max(0, healthScore),
-      healthStatus
-    }
-  }
 
   const exportToCSV = () => {
     const cashflowData = getFilteredCashflowData()
@@ -665,6 +581,220 @@ function App() {
     window.URL.revokeObjectURL(url)
   }
 
+  const exportInputData = () => {
+    const inputData = {
+      startingBalance,
+      incomes,
+      creditCards,
+      recurringExpenses,
+      oneTimeExpenses,
+      projectionDays
+    }
+    
+    // Create CSV content with structured sections
+    const csvLines = []
+    
+    // Header
+    csvLines.push('# Cashflow Management - Input Data Export')
+    csvLines.push(`# Exported on: ${new Date().toISOString()}`)
+    csvLines.push('')
+    
+    // Starting Balance
+    csvLines.push('[STARTING_BALANCE]')
+    csvLines.push('Amount')
+    csvLines.push(startingBalance.toString())
+    csvLines.push('')
+    
+    // Projection Days
+    csvLines.push('[PROJECTION_DAYS]')
+    csvLines.push('Days')
+    csvLines.push(projectionDays.toString())
+    csvLines.push('')
+    
+    // Income Sources
+    csvLines.push('[INCOME_SOURCES]')
+    csvLines.push('ID,Name,Amount,Frequency,NextPayDate')
+    incomes.forEach(income => {
+      csvLines.push(`${income.id},"${income.name}",${income.amount},${income.frequency},${income.nextPayDate}`)
+    })
+    csvLines.push('')
+    
+    // Credit Cards
+    csvLines.push('[CREDIT_CARDS]')
+    csvLines.push('ID,Name,Balance,DueDate,PayDate')
+    creditCards.forEach(card => {
+      csvLines.push(`${card.id},"${card.name}",${card.balance},${card.dueDate},${card.payDate}`)
+    })
+    csvLines.push('')
+    
+    // Recurring Expenses
+    csvLines.push('[RECURRING_EXPENSES]')
+    csvLines.push('ID,Name,Amount,Category,Frequency,NextDueDate')
+    recurringExpenses.forEach(expense => {
+      csvLines.push(`${expense.id},"${expense.name}",${expense.amount},${expense.category},${expense.frequency},${expense.nextDueDate}`)
+    })
+    csvLines.push('')
+    
+    // One-Time Expenses
+    csvLines.push('[ONE_TIME_EXPENSES]')
+    csvLines.push('ID,Name,Amount,Category,Date')
+    oneTimeExpenses.forEach(expense => {
+      csvLines.push(`${expense.id},"${expense.name}",${expense.amount},${expense.category},${expense.date}`)
+    })
+    
+    // Create and download the file
+    const csvContent = csvLines.join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `cashflow-input-data-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const importInputData = (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+    
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const csvContent = e.target.result
+        const lines = csvContent.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'))
+        
+        let currentSection = null
+        let newStartingBalance = startingBalance
+        let newProjectionDays = projectionDays
+        let newIncomes = []
+        let newCreditCards = []
+        let newRecurringExpenses = []
+        let newOneTimeExpenses = []
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+          
+          // Check for section headers
+          if (line.startsWith('[') && line.endsWith(']')) {
+            currentSection = line.slice(1, -1)
+            continue
+          }
+          
+          // Skip header rows (contains column names)
+          if (line.includes('ID,Name') || line.includes('Amount') || line.includes('Days')) {
+            continue
+          }
+          
+          // Process data based on current section
+          switch (currentSection) {
+            case 'STARTING_BALANCE':
+              const balance = parseFloat(line)
+              if (!isNaN(balance)) newStartingBalance = balance
+              break
+              
+            case 'PROJECTION_DAYS':
+              const days = parseInt(line)
+              if (!isNaN(days) && days > 0) newProjectionDays = days
+              break
+              
+            case 'INCOME_SOURCES':
+              const incomeData = parseCsvLine(line)
+              if (incomeData.length >= 5) {
+                newIncomes.push({
+                  id: parseInt(incomeData[0]) || Date.now() + Math.random(),
+                  name: incomeData[1].replace(/"/g, ''),
+                  amount: parseFloat(incomeData[2]) || 0,
+                  frequency: incomeData[3] || 'monthly',
+                  nextPayDate: incomeData[4] || ''
+                })
+              }
+              break
+              
+            case 'CREDIT_CARDS':
+              const cardData = parseCsvLine(line)
+              if (cardData.length >= 5) {
+                newCreditCards.push({
+                  id: parseInt(cardData[0]) || Date.now() + Math.random(),
+                  name: cardData[1].replace(/"/g, ''),
+                  balance: parseFloat(cardData[2]) || 0,
+                  dueDate: cardData[3] || '',
+                  payDate: cardData[4] || ''
+                })
+              }
+              break
+              
+            case 'RECURRING_EXPENSES':
+              const recurringData = parseCsvLine(line)
+              if (recurringData.length >= 6) {
+                newRecurringExpenses.push({
+                  id: parseInt(recurringData[0]) || Date.now() + Math.random(),
+                  name: recurringData[1].replace(/"/g, ''),
+                  amount: parseFloat(recurringData[2]) || 0,
+                  category: recurringData[3] || 'Other',
+                  frequency: recurringData[4] || 'monthly',
+                  nextDueDate: recurringData[5] || ''
+                })
+              }
+              break
+              
+            case 'ONE_TIME_EXPENSES':
+              const onetimeData = parseCsvLine(line)
+              if (onetimeData.length >= 5) {
+                newOneTimeExpenses.push({
+                  id: parseInt(onetimeData[0]) || Date.now() + Math.random(),
+                  name: onetimeData[1].replace(/"/g, ''),
+                  amount: parseFloat(onetimeData[2]) || 0,
+                  category: onetimeData[3] || 'Other',
+                  date: onetimeData[4] || ''
+                })
+              }
+              break
+          }
+        }
+        
+        // Update state with imported data
+        setStartingBalance(newStartingBalance)
+        setProjectionDays(newProjectionDays)
+        setIncomes(newIncomes)
+        setCreditCards(newCreditCards)
+        setRecurringExpenses(newRecurringExpenses)
+        setOneTimeExpenses(newOneTimeExpenses)
+        
+        alert('Data imported successfully!')
+      } catch (error) {
+        console.error('Import error:', error)
+        alert('Error importing data. Please check the file format.')
+      }
+    }
+    reader.readAsText(file)
+    
+    // Reset the file input
+    event.target.value = ''
+  }
+  
+  // Helper function to parse CSV line with proper comma handling
+  const parseCsvLine = (line) => {
+    const result = []
+    let current = ''
+    let inQuotes = false
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+      
+      if (char === '"') {
+        inQuotes = !inQuotes
+      } else if (char === ',' && !inQuotes) {
+        result.push(current)
+        current = ''
+      } else {
+        current += char
+      }
+    }
+    result.push(current)
+    
+    return result
+  }
+
   return (
     <div className="app-container">
       {/* Tab Navigation */}
@@ -687,6 +817,12 @@ function App() {
         >
           Insights
         </button>
+        <button 
+          className={`tab-button ${activeTab === 'export-pdf' ? 'active' : ''}`}
+          onClick={() => setActiveTab('export-pdf')}
+        >
+          Export to PDF
+        </button>
       </div>
       
       {activeTab === 'inputs' && (
@@ -695,6 +831,51 @@ function App() {
         <div className="inputs-panel">
           <h2>Inputs</h2>
           
+          <div className="card">
+            <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
+              <h3 style={{ margin: 0 }}>Data Management</h3>
+              <div className="flex gap-md" style={{ alignItems: 'center' }}>
+                <button className="download" onClick={exportInputData}>Export Data</button>
+                <button 
+                  className="download" 
+                  onClick={() => document.getElementById('import-file-input').click()}
+                >
+                  Import Data
+                </button>
+                <input 
+                  id="import-file-input"
+                  type="file" 
+                  accept=".csv" 
+                  onChange={importInputData}
+                  style={{ display: 'none' }}
+                />
+                <button 
+                  className="help-btn" 
+                  onClick={() => setShowHelpModal(true)}
+                  style={{ 
+                    backgroundColor: 'var(--white)', 
+                    border: '1px solid var(--secondary-gray)', 
+                    borderRadius: '50%',
+                    fontSize: '0.75rem', 
+                    cursor: 'pointer', 
+                    padding: '0',
+                    width: '1.5rem',
+                    height: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--secondary-gray)',
+                    fontWeight: '600'
+                  }}
+                  title="Help - Data Storage Info"
+                >
+                  ?
+                </button>
+              </div>
+            </div>
+            <p>Export your data to back it up locally, or import previously saved data.</p>
+          </div>
+
           <div className="card">
             <h3>Starting Balance</h3>
             <input 
@@ -928,7 +1109,7 @@ function App() {
         <div className="projection-panel">
           <div className="projection-header">
             <h2>Cashflow Projection</h2>
-            <button className="download" onClick={exportToCSV}>Export CSV</button>
+            <button className="download" onClick={exportToCSV}>Export Cashflow CSV</button>
           </div>
           
           <div className="metric-card mb-md">
@@ -1069,7 +1250,7 @@ function App() {
           <div className="projection-panel">
             <div className="projection-header">
               <h2>Cashflow Projection</h2>
-              <button className="download" onClick={exportToCSV}>Export CSV</button>
+              <button className="download" onClick={exportToCSV}>Export Cashflow CSV</button>
             </div>
             
             <div className="metric-card mb-md">
@@ -1200,7 +1381,6 @@ function App() {
           <div className="summary-metrics">
             {(() => {
               const data = getFlowBreakdownData()
-              const savingsRate = data.totalIncome > 0 ? ((data.totalIncome - data.totalExpenses) / data.totalIncome * 100) : 0
               const netCashFlow = data.totalIncome - data.totalExpenses
               
               return (
@@ -1216,13 +1396,6 @@ function App() {
                     <div className="metric-period">Next {projectionDays} days</div>
                   </div>
                   <div className="metric-box">
-                    <h3>Savings Rate</h3>
-                    <div className={`metric-value ${savingsRate >= 0 ? 'positive' : 'negative'}`}>
-                      {savingsRate.toFixed(1)}%
-                    </div>
-                    <div className="metric-period">Income saved</div>
-                  </div>
-                  <div className="metric-box">
                     <h3>Net Cash Flow</h3>
                     <div className={`metric-value ${netCashFlow >= 0 ? 'positive' : 'negative'}`}>
                       ${Math.abs(netCashFlow).toFixed(0)}
@@ -1232,49 +1405,6 @@ function App() {
                 </>
               )
             })()} 
-          </div>
-          
-          {/* Financial Health Alerts */}
-          <div className="health-alerts">
-            {(() => {
-              const healthData = getFinancialHealthAnalysis()
-              return (
-                <>
-                  <div className="health-score-container">
-                    <div className="health-score">
-                      <h3>Financial Health Score</h3>
-                      <div className={`score-circle ${healthData.healthStatus}`}>
-                        {healthData.healthScore}
-                      </div>
-                      <div className="status-label">{healthData.healthStatus.toUpperCase()}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="alerts-container">
-                    {healthData.alerts.map((alert, index) => (
-                      <div key={index} className={`alert alert-${alert.type}`}>
-                        <div className="alert-icon">{alert.icon}</div>
-                        <div className="alert-content">
-                          <h4>{alert.title}</h4>
-                          <p>{alert.message}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {healthData.suggestions.length > 0 && (
-                    <div className="suggestions-container">
-                      <h4>💡 Smart Suggestions</h4>
-                      <ul>
-                        {healthData.suggestions.map((suggestion, index) => (
-                          <li key={index}>{suggestion}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              )
-            })()}
           </div>
           
           {/* Sankey Diagram */}

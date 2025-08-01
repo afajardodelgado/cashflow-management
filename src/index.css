@@ -1426,6 +1426,51 @@ a:hover {
   font-size: 0.875rem;
 }
 
+/* Balance Summary */
+.balance-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  align-items: center;
+}
+
+.balance-summary .metric-card {
+  flex: 1;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.balance-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--secondary-gray);
+  margin-bottom: var(--space-xs);
+  line-height: 1.2;
+}
+
+.balance-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-black);
+  line-height: 1;
+}
+
+.balance-amount.negative {
+  color: #DC2626;
+}
+
+/* Responsive Balance Summary */
+@media (max-width: 768px) {
+  .balance-summary {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  
+  .balance-summary .metric-card {
+    width: 100%;
+  }
+}
+
 /* Responsive PDF Tables */
 @media (max-width: 768px) {
   .pdf-tables {

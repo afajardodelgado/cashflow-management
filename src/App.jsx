@@ -380,6 +380,23 @@ function App() {
     return cashflowData
   }
 
+  // Get estimated balance and final date
+  const getEstimatedBalance = () => {
+    const cashflowData = calculateCashflow(projectionDays)
+    if (cashflowData.length === 0) {
+      return {
+        balance: startingBalance,
+        date: new Date()
+      }
+    }
+    
+    const finalDay = cashflowData[cashflowData.length - 1]
+    return {
+      balance: finalDay.runningBalance,
+      date: finalDay.date
+    }
+  }
+
   // Custom tooltip for the chart
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -1112,8 +1129,31 @@ function App() {
             <button className="download" onClick={exportToCSV}>Export Cashflow CSV</button>
           </div>
           
-          <div className="metric-card mb-md">
-            <strong>Starting Balance: ${startingBalance.toFixed(2)}</strong>
+          {/* Balance Summary */}
+          <div className="balance-summary mb-md">
+            <div className="metric-card">
+              <div className="balance-label">Starting Balance</div>
+              <div className="balance-amount">${startingBalance.toFixed(2)}</div>
+            </div>
+            <div className="metric-card">
+              {(() => {
+                const estimated = getEstimatedBalance()
+                const month = estimated.date.getMonth() + 1
+                const day = estimated.date.getDate()
+                const shortDate = `${month}/${day}`
+                const balanceText = estimated.balance < 0 ? 
+                  `($${Math.abs(estimated.balance).toFixed(2)})` : 
+                  `$${estimated.balance.toFixed(2)}`
+                return (
+                  <>
+                    <div className="balance-label">Estimated Balance on {shortDate}</div>
+                    <div className={`balance-amount ${estimated.balance < 0 ? 'negative' : ''}`}>
+                      {balanceText}
+                    </div>
+                  </>
+                )
+              })()} 
+            </div>
           </div>
 
           {/* Projection Controls */}
@@ -1253,8 +1293,31 @@ function App() {
               <button className="download" onClick={exportToCSV}>Export Cashflow CSV</button>
             </div>
             
-            <div className="metric-card mb-md">
-              <strong>Starting Balance: ${startingBalance.toFixed(2)}</strong>
+            {/* Balance Summary */}
+            <div className="balance-summary mb-md">
+              <div className="metric-card">
+                <div className="balance-label">Starting Balance</div>
+                <div className="balance-amount">${startingBalance.toFixed(2)}</div>
+              </div>
+              <div className="metric-card">
+                {(() => {
+                  const estimated = getEstimatedBalance()
+                  const month = estimated.date.getMonth() + 1
+                  const day = estimated.date.getDate()
+                  const shortDate = `${month}/${day}`
+                  const balanceText = estimated.balance < 0 ? 
+                    `($${Math.abs(estimated.balance).toFixed(2)})` : 
+                    `$${estimated.balance.toFixed(2)}`
+                  return (
+                    <>
+                      <div className="balance-label">Estimated Balance on {shortDate}</div>
+                      <div className={`balance-amount ${estimated.balance < 0 ? 'negative' : ''}`}>
+                        {balanceText}
+                      </div>
+                    </>
+                  )
+                })()} 
+              </div>
             </div>
 
             {/* Projection Controls */}

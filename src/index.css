@@ -105,6 +105,26 @@ button.download:hover {
   color: var(--white);
 }
 
+/* Add Button Green Highlight */
+button.add-button {
+  transition: all 0.3s ease;
+}
+
+button.add-button:active {
+  background-color: var(--primary-green);
+  color: var(--white);
+  border-color: var(--primary-green);
+  transform: scale(0.98);
+}
+
+button.add-button:focus {
+  background-color: var(--primary-green);
+  color: var(--white);
+  border-color: var(--primary-green);
+  outline: 2px solid var(--primary-green);
+  outline-offset: 2px;
+}
+
 /* Input Fields */
 input {
   max-width: 240px;
@@ -160,6 +180,23 @@ label {
   align-items: center;
   font-size: 0.875rem;
   cursor: pointer;
+}
+
+/* Input Group Styling */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex: 1;
+}
+
+.input-group label {
+  font-weight: 600;
+  color: var(--text-black);
+  font-size: 0.75rem;
+  margin-bottom: var(--space-xs);
+  display: block;
+  cursor: default;
 }
 
 /* Cards */
@@ -830,5 +867,389 @@ a:hover {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-xs);
+  }
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  background-color: var(--white);
+  border-bottom: 1px solid #E5E5E5;
+  padding: 0 var(--space-xl);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.tab-button {
+  padding: var(--space-lg) var(--space-xl);
+  border: none;
+  background: transparent;
+  color: var(--secondary-gray);
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.tab-button:hover {
+  color: var(--text-black);
+  background-color: var(--bg-cream);
+}
+
+.tab-button.active {
+  color: var(--primary-green);
+  border-bottom-color: var(--primary-green);
+  background-color: transparent;
+}
+
+/* Insights Layout */
+.insights-layout {
+  padding: var(--space-xl);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.projection-layout {
+  padding: var(--space-xl);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Summary Metrics */
+.summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xxl);
+}
+
+.metric-box {
+  background-color: var(--white);
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  padding: var(--space-xl);
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.metric-box h3 {
+  margin: 0 0 var(--space-md) 0;
+  color: var(--secondary-gray);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+  line-height: 1;
+}
+
+.metric-value.positive {
+  color: var(--primary-green);
+}
+
+.metric-value.negative {
+  color: #DC2626;
+}
+
+.metric-period {
+  font-size: 0.75rem;
+  color: var(--secondary-gray);
+  font-weight: 500;
+}
+
+/* Sankey Chart Container */
+.sankey-chart {
+  height: 500px;
+  margin: var(--space-xl) 0;
+  background-color: #FAFAFA;
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
+}
+
+/* Sankey Placeholder */
+.sankey-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #FAFAFA;
+}
+
+.placeholder-content {
+  text-align: center;
+  color: var(--secondary-gray);
+}
+
+.placeholder-content h3 {
+  color: var(--text-black);
+  margin-bottom: var(--space-md);
+}
+
+.placeholder-content p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  max-width: 400px;
+}
+
+/* Flow Breakdown Section for Insights */
+.flow-breakdown-section {
+  margin-top: var(--space-xxl);
+}
+
+.flow-breakdown-container {
+  background-color: var(--white);
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  padding: var(--space-xxl);
+}
+
+.flow-breakdown-container h2 {
+  text-align: center;
+  color: var(--primary-green);
+  font-size: 1.5rem;
+  margin-bottom: var(--space-sm);
+}
+
+.flow-breakdown-container p {
+  text-align: center;
+  color: var(--secondary-gray);
+  margin-bottom: var(--space-xl);
+}
+
+/* Responsive Design for New Layouts */
+@media (max-width: 1200px) {
+  .summary-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .tab-navigation {
+    padding: 0 var(--space-lg);
+  }
+  
+  .tab-button {
+    padding: var(--space-md) var(--space-lg);
+    font-size: 0.875rem;
+  }
+  
+  .insights-layout,
+  .projection-layout {
+    padding: var(--space-lg);
+  }
+  
+  .summary-metrics {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+  
+  .metric-box {
+    padding: var(--space-lg);
+  }
+  
+  .metric-value {
+    font-size: 1.5rem;
+  }
+  
+  .sankey-chart {
+    height: 350px;
+    margin: var(--space-lg) 0;
+  }
+  
+  .flow-breakdown-container {
+    padding: var(--space-lg);
+  }
+}
+
+/* Financial Health Alert System */
+.health-alerts {
+  margin: var(--space-xxl) 0;
+}
+
+.health-score-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-xl);
+}
+
+.health-score {
+  text-align: center;
+  background-color: var(--white);
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  padding: var(--space-xl);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.health-score h3 {
+  margin: 0 0 var(--space-md) 0;
+  color: var(--text-black);
+  font-size: 1rem;
+}
+
+.score-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-md);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--white);
+  border: 6px solid;
+}
+
+.score-circle.excellent {
+  background-color: var(--primary-green);
+  border-color: var(--primary-green);
+}
+
+.score-circle.fair {
+  background-color: #F59E0B;
+  border-color: #F59E0B;
+}
+
+.score-circle.poor {
+  background-color: #DC2626;
+  border-color: #DC2626;
+}
+
+.status-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--secondary-gray);
+  letter-spacing: 0.5px;
+}
+
+.alerts-container {
+  display: grid;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+.alert-success {
+  background-color: #F0FDF4;
+  border-left-color: var(--primary-green);
+}
+
+.alert-warning {
+  background-color: #FFFBEB;
+  border-left-color: #F59E0B;
+}
+
+.alert-danger {
+  background-color: #FEF2F2;
+  border-left-color: #DC2626;
+}
+
+.alert-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.alert-content h4 {
+  margin: 0 0 var(--space-xs) 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.alert-content p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.alert-success .alert-content h4 {
+  color: var(--primary-green);
+}
+
+.alert-warning .alert-content h4 {
+  color: #F59E0B;
+}
+
+.alert-danger .alert-content h4 {
+  color: #DC2626;
+}
+
+.suggestions-container {
+  background-color: var(--white);
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  padding: var(--space-xl);
+}
+
+.suggestions-container h4 {
+  margin: 0 0 var(--space-md) 0;
+  color: var(--text-black);
+  font-size: 1rem;
+}
+
+.suggestions-container ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.suggestions-container li {
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid #F0F0F0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  position: relative;
+  padding-left: var(--space-lg);
+}
+
+.suggestions-container li:before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: var(--primary-green);
+  font-weight: 600;
+}
+
+.suggestions-container li:last-child {
+  border-bottom: none;
+}
+
+/* Responsive Design for Health Alerts */
+@media (max-width: 768px) {
+  .health-score {
+    padding: var(--space-lg);
+  }
+  
+  .score-circle {
+    width: 100px;
+    height: 100px;
+    font-size: 1.5rem;
+  }
+  
+  .alert {
+    padding: var(--space-md);
+    gap: var(--space-sm);
+  }
+  
+  .alert-icon {
+    font-size: 1.25rem;
+  }
+  
+  .suggestions-container {
+    padding: var(--space-lg);
   }
 }

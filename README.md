@@ -10,6 +10,7 @@ A React-based household cashflow management tool that provides 90-day rolling pr
 - **Recurring Expenses**: Custom categories for rent, car payments, utilities, etc.
 - **One-Time Expenses**: Future expenses like vacations, repairs
 - **90-Day Projection**: Daily cashflow visualization with negative balance indicators
+- **Advanced Insights**: Summary metrics with savings rate, Sankey flow visualization, and detailed breakdowns
 - **Data Persistence**: Save/load functionality using localStorage
 - **CSV Export**: Export projections with daily columns
 
@@ -87,13 +88,19 @@ src/
 └── assets/          # Static assets
 ```
 
+### Tab Architecture
+The application is structured with three main tabs:
+1. **Inputs Tab**: All data entry forms for income, expenses, credit cards, and settings
+2. **Projection Tab**: Cashflow visualization with line charts and daily breakdown tables
+3. **Insights Tab**: Advanced analytics with summary metrics, Sankey diagrams, and flow breakdowns
+
 ## Usage
 
 ### Navigation
 The application uses a tabbed interface:
 - **Inputs**: Configure income, expenses, and starting balance
-- **Projection**: View 90-day daily cashflow visualization
-- **Export**: Download cashflow data as CSV
+- **Projection**: View 90-day daily cashflow visualization with charts and tables
+- **Insights**: Advanced analytics with summary metrics, Sankey flow diagram, and detailed breakdowns
 
 ### Input Configuration
 1. **Starting Balance**: Set initial account balance
@@ -106,6 +113,17 @@ The application uses a tabbed interface:
 - Daily cashflow amounts for 90 rolling days
 - Red indicators for negative balances (displayed as parentheses)
 - Current balance tracking
+- Interactive line chart visualization
+- Export functionality for CSV data
+
+### Insights View
+- **Summary Metrics**: Four key financial metrics at a glance
+  - Total Income for projection period
+  - Total Expenses for projection period  
+  - Savings Rate percentage
+  - Net Cash Flow (surplus/deficit)
+- **Sankey Flow Diagram**: Visual representation of money flow from income sources to expense categories
+- **Detailed Breakdown**: Traditional tabular breakdown of income sources and expense categories with percentages
 
 ### Data Management
 - Automatic saving to browser localStorage
@@ -144,9 +162,20 @@ The application uses a tabbed interface:
 - Efficient re-rendering patterns
 - Local data storage only
 
+## Recent Updates
+
+### Version 2.0 - Insights Tab
+- **New Tab Navigation**: Restructured app with three distinct tabs (Inputs, Projection, Insights)
+- **Summary Metrics Dashboard**: Four key metrics displayed prominently
+- **Sankey Flow Visualization**: Interactive diagram showing money flow from income to expenses
+- **Enhanced Breakdown Views**: Improved categorization and percentage displays
+- **Responsive Design**: Mobile-optimized layouts for all new features
+
 ## Future Enhancements
 - Multiple currency support
 - Bank account integration
 - Advanced reporting features
 - Goal setting and tracking
 - Multi-user household support
+- Export to other formats (PDF, Excel)
+- Historical data analysis and trends

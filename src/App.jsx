@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { ResponsiveSankey } from '@nivo/sankey'
 import './App.css'
 
 function App() {
@@ -10,10 +11,12 @@ function App() {
   const [oneTimeExpenses, setOneTimeExpenses] = useState([])
   const [projectionDays, setProjectionDays] = useState(30)
   const [showTransactionDaysOnly, setShowTransactionDaysOnly] = useState(false)
+  const [activeTab, setActiveTab] = useState('inputs')
+  const [chartType, setChartType] = useState('line')
 
-  // Load data from localStorage on component mount
+  // Load data from sessionStorage on component mount
   useEffect(() => {
-    const savedData = localStorage.getItem('cashflowData')
+    const savedData = sessionStorage.getItem('cashflowData')
     if (savedData) {
       const data = JSON.parse(savedData)
       setStartingBalance(data.startingBalance || 0)
@@ -23,10 +26,12 @@ function App() {
       setOneTimeExpenses(data.oneTimeExpenses || [])
       setProjectionDays(data.projectionDays || 30)
       setShowTransactionDaysOnly(data.showTransactionDaysOnly || false)
+      setActiveTab(data.activeTab || 'inputs')
+      setChartType(data.chartType || 'line')
     }
   }, [])
 
-  // Save data to localStorage whenever state changes
+  // Save data to sessionStorage whenever state changes
   useEffect(() => {
     const dataToSave = {
       startingBalance,
@@ -35,10 +40,12 @@ function App() {
       recurringExpenses,
       oneTimeExpenses,
       projectionDays,
-      showTransactionDaysOnly
+      showTransactionDaysOnly,
+      activeTab,
+      chartType
     }
-    localStorage.setItem('cashflowData', JSON.stringify(dataToSave))
-  }, [startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays, showTransactionDaysOnly])
+    sessionStorage.setItem('cashflowData', JSON.stringify(dataToSave))
+  }, [startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays, showTransactionDaysOnly, activeTab, chartType])
 
   const addIncome = () => {
     setIncomes([...incomes, {
@@ -275,6 +282,7 @@ function App() {
     return filteredData.map((day, index) => ({
       day: index + 1,
       date: day.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }),
+      shortDate: `${day.date.getMonth() + 1}/${day.date.getDate()}`,
       balance: day.runningBalance,
       income: day.income,
       expenses: day.expenses,
@@ -382,6 +390,171 @@ function App() {
     }
   }
 
+  // Generate Sankey diagram data
+  const getSankeyData = () => {
+    try {
+      const flowData = getFlowBreakdownData()
+      
+      // Return empty data structure if no data
+      if (flowData.totalIncome === 0 && flowData.totalExpenses === 0) {
+        return {
+          nodes: [
+            { id: 'No Income Data' },
+            { id: 'No Expense Data' }
+          ],
+          links: []
+        }
+      }
+      
+      // Create nodes for income sources and expense categories
+      const incomeNodes = Object.keys(flowData.incomeBySource).map(name => ({ id: name }))
+      const expenseNodes = [
+        ...Object.keys(flowData.expensesByCategory).map(name => ({ id: name })),
+        ...Object.keys(flowData.creditCardExpenses).map(name => ({ id: `${name} (Credit)` })),
+        ...Object.keys(flowData.oneTimeExpensesByName).map(name => ({ id: `${name} (One-time)` }))
+      ]
+      
+      const nodes = [...incomeNodes, ...expenseNodes]
+      
+      // Create links based on proportional distribution
+      const links = []
+      const totalIncome = flowData.totalIncome
+      
+      if (totalIncome > 0 && incomeNodes.length > 0 && expenseNodes.length > 0) {
+        // Distribute income proportionally to expenses
+        const allExpenses = {
+          ...flowData.expensesByCategory,
+          ...Object.fromEntries(
+            Object.entries(flowData.creditCardExpenses).map(([k, v]) => [`${k} (Credit)`, v])
+          ),
+          ...Object.fromEntries(
+            Object.entries(flowData.oneTimeExpensesByName).map(([k, v]) => [`${k} (One-time)`, v])
+          )
+        }
+        
+        Object.entries(flowData.incomeBySource).forEach(([incomeName, incomeAmount]) => {
+          Object.entries(allExpenses).forEach(([expenseName, expenseAmount]) => {
+            const proportionalAmount = (incomeAmount / totalIncome) * expenseAmount
+            if (proportionalAmount > 0.01) { // Minimum threshold to avoid tiny links
+              links.push({
+                source: incomeName,
+                target: expenseName,
+                value: Math.round(proportionalAmount * 100) / 100 // Round to 2 decimal places
+              })
+            }
+          })
+        })
+      }
+      
+      // Ensure we have valid data structure
+      if (nodes.length === 0 || links.length === 0) {
+        return {
+          nodes: [
+            { id: 'Add Income' },
+            { id: 'Add Expenses' }
+          ],
+          links: []
+        }
+      }
+      
+      return { nodes, links }
+    } catch (error) {
+      console.error('Error generating Sankey data:', error)
+      return {
+        nodes: [
+          { id: 'Error Loading Data' }
+        ],
+        links: []
+      }
+    }
+  }
+
+  // Financial Health Analysis
+  const getFinancialHealthAnalysis = () => {
+    const cashflowData = calculateCashflow(projectionDays)
+    const flowBreakdown = getFlowBreakdownData()
+    
+    const alerts = []
+    const suggestions = []
+    let healthScore = 100
+    let healthStatus = 'excellent'
+    
+    // Check for negative balance in next 7 days
+    const next7Days = cashflowData.slice(0, 7)
+    const willGoNegative = next7Days.some(day => day.runningBalance < 0)
+    const daysUntilNegative = cashflowData.findIndex(day => day.runningBalance < 0)
+    
+    if (willGoNegative) {
+      alerts.push({
+        type: 'danger',
+        title: 'Cash Flow Warning',
+        message: `You may run out of money in ${daysUntilNegative + 1} days`,
+        icon: '⚠️'
+      })
+      suggestions.push('Consider delaying non-essential expenses or increasing income')
+      healthScore -= 40
+      healthStatus = 'poor'
+    }
+    
+    // Check savings rate
+    const savingsRate = flowBreakdown.totalIncome > 0 ? 
+      ((flowBreakdown.totalIncome - flowBreakdown.totalExpenses) / flowBreakdown.totalIncome * 100) : 0
+    
+    if (savingsRate < 0) {
+      alerts.push({
+        type: 'danger',
+        title: 'Spending Exceeds Income',
+        message: `You're spending ${Math.abs(savingsRate).toFixed(1)}% more than you earn`,
+        icon: '💸'
+      })
+      healthScore -= 30
+    } else if (savingsRate < 10) {
+      alerts.push({
+        type: 'warning',
+        title: 'Low Savings Rate',
+        message: `Your savings rate is ${savingsRate.toFixed(1)}%. Aim for 10-20%`,
+        icon: '💰'
+      })
+      suggestions.push('Try the 50/30/20 rule: 50% needs, 30% wants, 20% savings')
+      healthScore -= 20
+      healthStatus = healthScore >= 70 ? 'fair' : 'poor'
+    } else if (savingsRate >= 20) {
+      alerts.push({
+        type: 'success',
+        title: 'Excellent Savings Rate',
+        message: `Great job! You're saving ${savingsRate.toFixed(1)}% of your income`,
+        icon: '🎉'
+      })
+      healthStatus = 'excellent'
+    }
+    
+    // Check for irregular income/expense patterns
+    const hasIrregularExpenses = oneTimeExpenses.length > 0
+    if (hasIrregularExpenses) {
+      const totalOneTime = oneTimeExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0)
+      if (totalOneTime > flowBreakdown.totalIncome * 0.1) {
+        suggestions.push('Consider setting aside money monthly for irregular expenses')
+      }
+    }
+    
+    // Positive reinforcement
+    if (alerts.length === 0 || alerts.every(alert => alert.type === 'success')) {
+      alerts.push({
+        type: 'success',
+        title: 'Financial Health Looks Good',
+        message: 'Your cash flow is stable and well-managed',
+        icon: '✅'
+      })
+    }
+    
+    return {
+      alerts,
+      suggestions,
+      healthScore: Math.max(0, healthScore),
+      healthStatus
+    }
+  }
+
   const exportToCSV = () => {
     const cashflowData = getFilteredCashflowData()
     
@@ -413,7 +586,29 @@ function App() {
 
   return (
     <div className="app-container">
+      {/* Tab Navigation */}
+      <div className="tab-navigation">
+        <button 
+          className={`tab-button ${activeTab === 'inputs' ? 'active' : ''}`}
+          onClick={() => setActiveTab('inputs')}
+        >
+          Inputs
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'projection' ? 'active' : ''}`}
+          onClick={() => setActiveTab('projection')}
+        >
+          Projection
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'insights' ? 'active' : ''}`}
+          onClick={() => setActiveTab('insights')}
+        >
+          Insights
+        </button>
+      </div>
       
+      {activeTab === 'inputs' && (
       <div className="main-layout">
         {/* Left Panel - Inputs */}
         <div className="inputs-panel">
@@ -436,18 +631,24 @@ function App() {
             {incomes.map(income => (
               <div key={income.id} className="income-item mb-md">
                 <div className="flex gap-md mb-sm">
-                  <input 
-                    type="text" 
-                    placeholder="Income name (e.g., Salary)"
-                    value={income.name}
-                    onChange={(e) => updateIncome(income.id, 'name', e.target.value)}
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Amount"
-                    value={income.amount || ''}
-                    onChange={(e) => updateIncome(income.id, 'amount', parseFloat(e.target.value) || 0)}
-                  />
+                  <div className="input-group">
+                    <label>Income Name:</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g., Salary, Freelance"
+                      value={income.name}
+                      onChange={(e) => updateIncome(income.id, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Amount:</label>
+                    <input 
+                      type="number" 
+                      placeholder="0.00"
+                      value={income.amount || ''}
+                      onChange={(e) => updateIncome(income.id, 'amount', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-md mb-sm">
                   <select 
@@ -469,7 +670,7 @@ function App() {
               </div>
             ))}
             
-            <button onClick={addIncome}>+ Add Income</button>
+            <button className="add-button" onClick={addIncome}>+ Add Income</button>
           </div>
 
           <div className="card">
@@ -479,18 +680,24 @@ function App() {
             {creditCards.map(card => (
               <div key={card.id} className="income-item mb-md">
                 <div className="flex gap-md mb-sm">
-                  <input 
-                    type="text" 
-                    placeholder="Card name (e.g., Chase Sapphire)"
-                    value={card.name}
-                    onChange={(e) => updateCreditCard(card.id, 'name', e.target.value)}
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Balance"
-                    value={card.balance || ''}
-                    onChange={(e) => updateCreditCard(card.id, 'balance', parseFloat(e.target.value) || 0)}
-                  />
+                  <div className="input-group">
+                    <label>Card Name:</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g., Chase Sapphire"
+                      value={card.name}
+                      onChange={(e) => updateCreditCard(card.id, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Balance:</label>
+                    <input 
+                      type="number" 
+                      placeholder="0.00"
+                      value={card.balance || ''}
+                      onChange={(e) => updateCreditCard(card.id, 'balance', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-md mb-sm">
                   <div className="date-field">
@@ -521,7 +728,7 @@ function App() {
               </div>
             ))}
             
-            <button onClick={addCreditCard}>+ Add Credit Card</button>
+            <button className="add-button" onClick={addCreditCard}>+ Add Credit Card</button>
           </div>
 
           <div className="card">
@@ -531,18 +738,24 @@ function App() {
             {recurringExpenses.map(expense => (
               <div key={expense.id} className="income-item mb-md">
                 <div className="flex gap-md mb-sm">
-                  <input 
-                    type="text" 
-                    placeholder="Expense name (e.g., Rent)"
-                    value={expense.name}
-                    onChange={(e) => updateRecurringExpense(expense.id, 'name', e.target.value)}
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Amount"
-                    value={expense.amount || ''}
-                    onChange={(e) => updateRecurringExpense(expense.id, 'amount', parseFloat(e.target.value) || 0)}
-                  />
+                  <div className="input-group">
+                    <label>Expense Name:</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g., Rent, Car Payment"
+                      value={expense.name}
+                      onChange={(e) => updateRecurringExpense(expense.id, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Amount:</label>
+                    <input 
+                      type="number" 
+                      placeholder="0.00"
+                      value={expense.amount || ''}
+                      onChange={(e) => updateRecurringExpense(expense.id, 'amount', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-md mb-sm">
                   <select 
@@ -575,7 +788,7 @@ function App() {
               </div>
             ))}
             
-            <button onClick={addRecurringExpense}>+ Add Expense</button>
+            <button className="add-button" onClick={addRecurringExpense}>+ Add Expense</button>
           </div>
 
           <div className="card">
@@ -585,18 +798,24 @@ function App() {
             {oneTimeExpenses.map(expense => (
               <div key={expense.id} className="income-item mb-md">
                 <div className="flex gap-md mb-sm">
-                  <input 
-                    type="text" 
-                    placeholder="Expense name (e.g., Vacation)"
-                    value={expense.name}
-                    onChange={(e) => updateOneTimeExpense(expense.id, 'name', e.target.value)}
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Amount"
-                    value={expense.amount || ''}
-                    onChange={(e) => updateOneTimeExpense(expense.id, 'amount', parseFloat(e.target.value) || 0)}
-                  />
+                  <div className="input-group">
+                    <label>Expense Name:</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g., Vacation, Car Repair"
+                      value={expense.name}
+                      onChange={(e) => updateOneTimeExpense(expense.id, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Amount:</label>
+                    <input 
+                      type="number" 
+                      placeholder="0.00"
+                      value={expense.amount || ''}
+                      onChange={(e) => updateOneTimeExpense(expense.id, 'amount', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-md mb-sm">
                   <select 
@@ -620,7 +839,7 @@ function App() {
               </div>
             ))}
             
-            <button onClick={addOneTimeExpense}>+ Add One-Time Expense</button>
+            <button className="add-button" onClick={addOneTimeExpense}>+ Add One-Time Expense</button>
           </div>
         </div>
 
@@ -660,6 +879,17 @@ function App() {
                 Show Only Transaction Days
               </label>
             </div>
+            <div className="control-group">
+              <label htmlFor="chartType">Chart Type:</label>
+              <select 
+                id="chartType"
+                value={chartType} 
+                onChange={(e) => setChartType(e.target.value)}
+              >
+                <option value="line">Line Chart</option>
+                <option value="bar">Bar Chart</option>
+              </select>
+            </div>
           </div>
           
           {/* Cashflow Graph */}
@@ -667,29 +897,50 @@ function App() {
             <h3>Balance Trend</h3>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={getChartData()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
-                  <XAxis 
-                    dataKey="day" 
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(day) => `Day ${day}`}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `$${value.toLocaleString()}`}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
-                  <Line 
-                    type="monotone" 
-                    dataKey="balance" 
-                    stroke="#2A623C" 
-                    strokeWidth={2}
-                    dot={{ fill: '#2A623C', strokeWidth: 1, r: 3 }}
-                    activeDot={{ r: 5, fill: '#2A623C' }}
-                  />
-                </LineChart>
+                {chartType === 'line' ? (
+                  <LineChart data={getChartData()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                    <XAxis 
+                      dataKey="shortDate" 
+                      tick={{ fontSize: 12 }}
+                      interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `$${value.toLocaleString()}`}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
+                    <Line 
+                      type="monotone" 
+                      dataKey="balance" 
+                      stroke="#2A623C" 
+                      strokeWidth={2}
+                      dot={{ fill: '#2A623C', strokeWidth: 1, r: 3 }}
+                      activeDot={{ r: 5, fill: '#2A623C' }}
+                    />
+                  </LineChart>
+                ) : (
+                  <BarChart data={getChartData()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                    <XAxis 
+                      dataKey="shortDate" 
+                      tick={{ fontSize: 12 }}
+                      interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `$${value.toLocaleString()}`}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
+                    <Bar 
+                      dataKey="balance" 
+                      fill="#2A623C"
+                      opacity={0.8}
+                    />
+                  </BarChart>
+                )}
               </ResponsiveContainer>
             </div>
           </div>
@@ -722,14 +973,279 @@ function App() {
           </div>
         </div>
       </div>
+      )}
       
-      {/* Flow Breakdown - Full Width Bottom Section */}
-      <div className="sankey-section">
-        <div className="sankey-container">
-          <h2>Income vs Expenses Breakdown</h2>
-          <p>Totals for the next {projectionDays} days</p>
+      {activeTab === 'projection' && (
+        <div className="projection-layout">
+          <div className="projection-panel">
+            <div className="projection-header">
+              <h2>Cashflow Projection</h2>
+              <button className="download" onClick={exportToCSV}>Export CSV</button>
+            </div>
+            
+            <div className="metric-card mb-md">
+              <strong>Starting Balance: ${startingBalance.toFixed(2)}</strong>
+            </div>
+
+            {/* Projection Controls */}
+            <div className="projection-controls mb-lg">
+              <div className="control-group">
+                <label htmlFor="projectionDays">Days to Show:</label>
+                <select 
+                  id="projectionDays"
+                  value={projectionDays} 
+                  onChange={(e) => setProjectionDays(parseInt(e.target.value))}
+                >
+                  <option value={15}>Next 15 Days</option>
+                  <option value={30}>Next 30 Days</option>
+                  <option value={60}>Next 60 Days</option>
+                  <option value={90}>Next 90 Days</option>
+                </select>
+              </div>
+              <div className="control-group">
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={showTransactionDaysOnly}
+                    onChange={(e) => setShowTransactionDaysOnly(e.target.checked)}
+                  />
+                  Show Only Transaction Days
+                </label>
+              </div>
+            </div>
+            
+            {/* Cashflow Graph */}
+            <div className="cashflow-graph mb-lg">
+              <h3>Balance Trend</h3>
+              <div className="chart-container">
+                <ResponsiveContainer width="100%" height={300}>
+                  {chartType === 'line' ? (
+                    <LineChart data={getChartData()}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                      <XAxis 
+                        dataKey="shortDate" 
+                        tick={{ fontSize: 12 }}
+                        interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => `$${value.toLocaleString()}`}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
+                      <Line 
+                        type="monotone" 
+                        dataKey="balance" 
+                        stroke="#2A623C" 
+                        strokeWidth={2}
+                        dot={{ fill: '#2A623C', strokeWidth: 1, r: 3 }}
+                        activeDot={{ r: 5, fill: '#2A623C' }}
+                      />
+                    </LineChart>
+                  ) : (
+                    <BarChart data={getChartData()}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                      <XAxis 
+                        dataKey="shortDate" 
+                        tick={{ fontSize: 12 }}
+                        interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => `$${value.toLocaleString()}`}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
+                      <Bar 
+                        dataKey="balance" 
+                        fill="#2A623C"
+                        opacity={0.8}
+                      />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+            
+            {/* Full Cashflow Table */}
+            <div className="cashflow-table-section">
+              <h3>Daily Breakdown</h3>
+              <div className="cashflow-table">
+                {getFilteredCashflowData().map((day, index) => (
+                  <div key={index} className="cashflow-row">
+                    <div className="cashflow-data">
+                      <div className="date-col">
+                        {day.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
+                      </div>
+                      <div className="income-col">
+                        Income: ${day.income.toFixed(2)}
+                      </div>
+                      <div className="expense-col">
+                        Expenses: ${day.expenses.toFixed(2)}
+                      </div>
+                      <div className="balance-col">
+                        Balance: <span className={day.runningBalance < 0 ? 'negative' : ''}>
+                          ${Math.abs(day.runningBalance).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {activeTab === 'insights' && (
+        <div className="insights-layout">
+          {/* Summary Metrics */}
+          <div className="summary-metrics">
+            {(() => {
+              const data = getFlowBreakdownData()
+              const savingsRate = data.totalIncome > 0 ? ((data.totalIncome - data.totalExpenses) / data.totalIncome * 100) : 0
+              const netCashFlow = data.totalIncome - data.totalExpenses
+              
+              return (
+                <>
+                  <div className="metric-box">
+                    <h3>Total Income</h3>
+                    <div className="metric-value positive">${data.totalIncome.toFixed(0)}</div>
+                    <div className="metric-period">Next {projectionDays} days</div>
+                  </div>
+                  <div className="metric-box">
+                    <h3>Total Expenses</h3>
+                    <div className="metric-value negative">${data.totalExpenses.toFixed(0)}</div>
+                    <div className="metric-period">Next {projectionDays} days</div>
+                  </div>
+                  <div className="metric-box">
+                    <h3>Savings Rate</h3>
+                    <div className={`metric-value ${savingsRate >= 0 ? 'positive' : 'negative'}`}>
+                      {savingsRate.toFixed(1)}%
+                    </div>
+                    <div className="metric-period">Income saved</div>
+                  </div>
+                  <div className="metric-box">
+                    <h3>Net Cash Flow</h3>
+                    <div className={`metric-value ${netCashFlow >= 0 ? 'positive' : 'negative'}`}>
+                      ${Math.abs(netCashFlow).toFixed(0)}
+                    </div>
+                    <div className="metric-period">{netCashFlow >= 0 ? 'Surplus' : 'Deficit'}</div>
+                  </div>
+                </>
+              )
+            })()} 
+          </div>
           
-          <div className="flow-breakdown">
+          {/* Financial Health Alerts */}
+          <div className="health-alerts">
+            {(() => {
+              const healthData = getFinancialHealthAnalysis()
+              return (
+                <>
+                  <div className="health-score-container">
+                    <div className="health-score">
+                      <h3>Financial Health Score</h3>
+                      <div className={`score-circle ${healthData.healthStatus}`}>
+                        {healthData.healthScore}
+                      </div>
+                      <div className="status-label">{healthData.healthStatus.toUpperCase()}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="alerts-container">
+                    {healthData.alerts.map((alert, index) => (
+                      <div key={index} className={`alert alert-${alert.type}`}>
+                        <div className="alert-icon">{alert.icon}</div>
+                        <div className="alert-content">
+                          <h4>{alert.title}</h4>
+                          <p>{alert.message}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {healthData.suggestions.length > 0 && (
+                    <div className="suggestions-container">
+                      <h4>💡 Smart Suggestions</h4>
+                      <ul>
+                        {healthData.suggestions.map((suggestion, index) => (
+                          <li key={index}>{suggestion}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
+          </div>
+          
+          {/* Sankey Diagram */}
+          <div className="sankey-section">
+            <div className="sankey-container">
+              <h2>Cash Flow Visualization</h2>
+              <p>Income sources flowing to expenses for the next {projectionDays} days</p>
+              
+              <div className="sankey-chart">
+                {(() => {
+                  try {
+                    const sankeyData = getSankeyData()
+                    console.log('Sankey data:', sankeyData) // Debug log
+                    
+                    // Show message if no data
+                    if (sankeyData.links.length === 0) {
+                      return (
+                        <div className="sankey-placeholder">
+                          <div className="placeholder-content">
+                            <h3>No Flow Data Available</h3>
+                            <p>Add income sources and expenses in the Inputs tab to see the cash flow visualization.</p>
+                          </div>
+                        </div>
+                      )
+                    }
+                    
+                    return (
+                      <ResponsiveSankey
+                        data={sankeyData}
+                        margin={{ top: 40, right: 160, bottom: 40, left: 50 }}
+                        align="justify"
+                        colors={{ scheme: 'set2' }}
+                        nodeOpacity={1}
+                        nodeHoverOthersOpacity={0.35}
+                        nodeThickness={18}
+                        nodeSpacing={24}
+                        nodeBorderWidth={0}
+                        linkOpacity={0.5}
+                        linkHoverOthersOpacity={0.1}
+                        enableLinkGradient={true}
+                        labelPosition="outside"
+                        labelOrientation="vertical"
+                        labelTextColor={{ from: 'color', modifiers: [['darker', 1]] }}
+                      />
+                    )
+                  } catch (error) {
+                    console.error('Sankey render error:', error)
+                    return (
+                      <div className="sankey-placeholder">
+                        <div className="placeholder-content">
+                          <h3>Visualization Unavailable</h3>
+                          <p>There was an error loading the cash flow diagram. Please check your data inputs.</p>
+                        </div>
+                      </div>
+                    )
+                  }
+                })()}
+              </div>
+            </div>
+          </div>
+          
+          {/* Traditional Flow Breakdown */}
+          <div className="flow-breakdown-section">
+            <div className="flow-breakdown-container">
+              <h2>Income vs Expenses Breakdown</h2>
+              <p>Detailed breakdown for the next {projectionDays} days</p>
+              
+              <div className="flow-breakdown">
             {(() => {
               const data = getFlowBreakdownData()
               return (
@@ -772,9 +1288,11 @@ function App() {
                 </>
               )
             })()}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts'
 import { ResponsiveSankey } from '@nivo/sankey'
 import './App.css'
 
@@ -13,6 +13,7 @@ function App() {
   const [showTransactionDaysOnly, setShowTransactionDaysOnly] = useState(false)
   const [activeTab, setActiveTab] = useState('inputs')
   const [chartType, setChartType] = useState('line')
+  const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0)
 
   // Load data from sessionStorage on component mount
   useEffect(() => {
@@ -127,6 +128,85 @@ function App() {
   const removeOneTimeExpense = (id) => {
     setOneTimeExpenses(oneTimeExpenses.filter(expense => expense.id !== id))
   }
+
+  // Taglines collection
+  const taglines = [
+    "No judgement, no API integration, no Plaid",
+    "We won't remind you how much you spent last summer",
+    "I don't care if 6 months ago you overdid it in St. Tropez",
+    "Don't care how many table services Plaid will remind you you have done 9 years ago",
+    "That vintage wine collection? Not our business.",
+    "We don't care about your art gallery splurges.",
+    "We won't mention the boat you bought drunk.",
+    "Those designer shoes from last spring? Forgotten.",
+    "We don't judge your DoorDash addiction.",
+    "Fresh start, fresh cash flow.",
+    "We're not your financial therapist.",
+    "Clean slate, dirty money welcome.",
+    "No receipts, no regrets, no reminders.",
+    "Your financial past can stay in therapy.",
+    "We don't do financial archaeology.",
+    "No transaction shaming since never.",
+    "We won't connect to your mistakes.",
+    "Your bank statements are safe from us.",
+    "No access to your financial trauma.",
+    "Overdid it in St. Tropez in 2017? We're not Plaid, we don't care.",
+    "Blew your savings in St. Tropez? We're not your bank app.",
+    "That St. Tropez summer of 2018? Not our circus, not our spreadsheet.",
+    "St. Tropez bottle service bills? We don't keep receipts.",
+    "Spent rent money in St. Tropez? We're not here to judge.",
+    "Your St. Tropez yacht week disaster? Ancient history.",
+    "Maxed out your cards in Mykonos? We're not Plaid, we don't remember.",
+    "Went broke in Ibiza? We're not your banking app.",
+    "That Coachella weekend that cost 3 months rent? We won't remind you.",
+    "Tulum ate your emergency fund? We don't do financial autopsies.",
+    "Your Miami boat party receipts? We don't sync with shame.",
+    "Aspen ski trip broke the bank? We're not Mint, we don't mention it.",
+    "That Cloud Nine champagne tab in Aspen? We won't bring it up.",
+    "Spent your bonus in Dubai? We're not keeping score.",
+    "Blew through savings in the Hamptons? We don't track regrets.",
+    "Casa de Campo golf week emptied your account? We won't mention it.",
+    "That Mayfair shopping spree? We're not your financial conscience.",
+    "Loro Piana summer walks cost more than most cars? We don't care.",
+    "Aspen powder days emptied your account? We won't remind you.",
+    "That Aspen weekend cost more than your car? We're not Plaid, we don't judge.",
+    "Spent Christmas money on Aspen lift tickets? Ancient history.",
+    "Aspen après-ski bills broke the bank? We don't keep receipts.",
+    "Your Aspen lodge weekend? We won't bring it up.",
+    "Your Bagatelle brunch bills? We don't keep tabs.",
+    "Dropped your rent money at Bagatelle? We're not your conscience.",
+    "That Bagatelle champagne parade from 2018? We won't mention it.",
+    "Seaspice ate your emergency fund? We don't do financial autopsies.",
+    "That Seaspice dinner cost more than your mortgage? We won't remind you.",
+    "Blew your savings on Seaspice weekends? We're not keeping track.",
+    "Your Seaspice yacht party receipts? Not our problem.",
+    "Medium Cool bottle service 2 months ago? We're not your transaction history.",
+    "That Soho House weekend destroyed your budget? We don't care.",
+    "Art Basel spending spree? We won't bring it up.",
+    "That designer handbag impulse buy? We're not Plaid, we don't care.",
+    "Invested in that friend's startup? We're not your transaction history.",
+    "Splurged on that watch collection? We're not Plaid, we're not counting."
+  ]
+
+  // Get a truly random tagline index
+  const getRandomTaglineIndex = () => {
+    return Math.floor(Math.random() * taglines.length)
+  }
+
+  // Random tagline on page refresh
+  useEffect(() => {
+    setCurrentTaglineIndex(getRandomTaglineIndex())
+  }, [])
+
+  // Random tagline on tab change
+  useEffect(() => {
+    setCurrentTaglineIndex(getRandomTaglineIndex())
+  }, [activeTab])
+
+  // Random tagline on projection days change
+  useEffect(() => {
+    setCurrentTaglineIndex(getRandomTaglineIndex())
+  }, [projectionDays])
 
   const calculateCashflow = (days = projectionDays) => {
     const today = new Date()
@@ -285,7 +365,7 @@ function App() {
       shortDate: `${day.date.getMonth() + 1}/${day.date.getDate()}`,
       balance: day.runningBalance,
       income: day.income,
-      expenses: day.expenses,
+      expenses: -day.expenses, // Negative for waterfall chart (goes down from zero)
       netChange: day.netChange
     }))
   }
@@ -303,16 +383,17 @@ function App() {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
+      const actualExpenses = Math.abs(data.expenses) // Convert back to positive for display
       return (
         <div className="chart-tooltip">
-          <p className="tooltip-date">{`Day ${label}: ${data.date}`}</p>
+          <p className="tooltip-date">{`${data.shortDate}: ${data.date}`}</p>
           <p className="tooltip-balance">
             Balance: <span className={data.balance < 0 ? 'negative' : 'positive'}>
               ${data.balance < 0 ? '(' + Math.abs(data.balance).toFixed(2) + ')' : data.balance.toFixed(2)}
             </span>
           </p>
           <p className="tooltip-income">Income: ${data.income.toFixed(2)}</p>
-          <p className="tooltip-expenses">Expenses: ${data.expenses.toFixed(2)}</p>
+          <p className="tooltip-expenses">Expenses: ${actualExpenses.toFixed(2)}</p>
           <p className="tooltip-net">Net: ${data.netChange.toFixed(2)}</p>
         </div>
       )
@@ -931,13 +1012,21 @@ function App() {
                     <YAxis 
                       tick={{ fontSize: 12 }}
                       tickFormatter={(value) => `$${value.toLocaleString()}`}
+                      domain={['dataMin', 'dataMax']}
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
+                    <ReferenceLine y={0} stroke="#374151" strokeWidth={2} />
                     <Bar 
-                      dataKey="balance" 
+                      dataKey="income" 
                       fill="#2A623C"
                       opacity={0.8}
+                      name="Income"
+                    />
+                    <Bar 
+                      dataKey="expenses" 
+                      fill="#DC2626"
+                      opacity={0.8}
+                      name="Expenses"
                     />
                   </BarChart>
                 )}
@@ -1053,13 +1142,21 @@ function App() {
                       <YAxis 
                         tick={{ fontSize: 12 }}
                         tickFormatter={(value) => `$${value.toLocaleString()}`}
+                        domain={['dataMin', 'dataMax']}
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
+                      <ReferenceLine y={0} stroke="#374151" strokeWidth={2} />
                       <Bar 
-                        dataKey="balance" 
+                        dataKey="income" 
                         fill="#2A623C"
                         opacity={0.8}
+                        name="Income"
+                      />
+                      <Bar 
+                        dataKey="expenses" 
+                        fill="#DC2626"
+                        opacity={0.8}
+                        name="Expenses"
                       />
                     </BarChart>
                   )}
@@ -1293,6 +1390,16 @@ function App() {
           </div>
         </div>
       )}
+      
+      {/* Tagline Footer */}
+      <div className="tagline-footer">
+        <div className="tagline-subtitle">
+          It's about the next {projectionDays} days, judgement free cashflow
+        </div>
+        <div className="tagline-main">
+          {taglines[currentTaglineIndex]}
+        </div>
+      </div>
     </div>
   )
 }

@@ -66,7 +66,7 @@ function App() {
       name: '',
       balance: 0,
       dueDate: '',
-      autoPayment: true
+      payDate: ''
     }])
   }
 
@@ -224,11 +224,11 @@ function App() {
         }
       })
       
-      // Calculate credit card payments (one-time on due date)
+      // Calculate credit card payments (use payDate if provided, else dueDate)
       creditCards.forEach(card => {
-        if (card.dueDate && card.balance && card.autoPayment) {
-          const dueDate = new Date(card.dueDate)
-          if (currentDate.toDateString() === dueDate.toDateString()) {
+        if (card.balance && (card.dueDate || card.payDate)) {
+          const paymentDate = new Date(card.payDate || card.dueDate)
+          if (currentDate.toDateString() === paymentDate.toDateString()) {
             dailyExpenses += card.balance
           }
         }
@@ -312,6 +312,76 @@ function App() {
     return null
   }
 
+  // Calculate flow breakdown data for visual display
+  const getFlowBreakdownData = () => {
+    // Calculate totals for the selected period
+    const incomeBySource = {}
+    const expensesByCategory = {}
+    const creditCardExpenses = {}
+    const oneTimeExpensesByName = {}
+    
+    let totalIncome = 0
+    let totalExpenses = 0
+    
+    // Calculate income by source (simplified approach)
+    incomes.forEach(income => {
+      if (income.name && income.amount) {
+        const occurrences = Math.floor(projectionDays / (
+          income.frequency === 'weekly' ? 7 : 
+          income.frequency === 'bi-weekly' ? 14 :
+          income.frequency === '15th-and-last' ? 15 : 30
+        ))
+        const totalAmount = income.amount * Math.max(1, occurrences)
+        incomeBySource[income.name] = totalAmount
+        totalIncome += totalAmount
+      }
+    })
+    
+    // Calculate recurring expenses by category
+    recurringExpenses.forEach(expense => {
+      if (expense.name && expense.category && expense.amount) {
+        const occurrences = Math.floor(projectionDays / (
+          expense.frequency === 'weekly' ? 7 : 
+          expense.frequency === 'bi-weekly' ? 14 : 30
+        ))
+        const totalAmount = expense.amount * Math.max(1, occurrences)
+        expensesByCategory[expense.category] = (expensesByCategory[expense.category] || 0) + totalAmount
+        totalExpenses += totalAmount
+      }
+    })
+    
+    // Calculate credit card expenses
+    creditCards.forEach(card => {
+      if (card.name && card.balance) {
+        creditCardExpenses[card.name] = card.balance
+        totalExpenses += card.balance
+      }
+    })
+    
+    // Calculate one-time expenses
+    oneTimeExpenses.forEach(expense => {
+      if (expense.name && expense.amount && expense.date) {
+        const expenseDate = new Date(expense.date)
+        const today = new Date()
+        const endDate = new Date(today.getTime() + projectionDays * 24 * 60 * 60 * 1000)
+        
+        if (expenseDate >= today && expenseDate <= endDate) {
+          oneTimeExpensesByName[expense.name] = expense.amount
+          totalExpenses += expense.amount
+        }
+      }
+    })
+    
+    return {
+      incomeBySource,
+      expensesByCategory,
+      creditCardExpenses,
+      oneTimeExpensesByName,
+      totalIncome,
+      totalExpenses
+    }
+  }
+
   const exportToCSV = () => {
     const cashflowData = getFilteredCashflowData()
     
@@ -343,9 +413,6 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header">
-        <h1>Cashflow Management Calculator</h1>
-      </header>
       
       <div className="main-layout">
         {/* Left Panel - Inputs */}
@@ -397,7 +464,7 @@ function App() {
                     value={income.nextPayDate}
                     onChange={(e) => updateIncome(income.id, 'nextPayDate', e.target.value)}
                   />
-                  <button onClick={() => removeIncome(income.id)}>Remove</button>
+                  <button className="remove-btn" onClick={() => removeIncome(income.id)}>Remove</button>
                 </div>
               </div>
             ))}
@@ -426,21 +493,31 @@ function App() {
                   />
                 </div>
                 <div className="flex gap-md mb-sm">
-                  <input 
-                    type="date" 
-                    value={card.dueDate}
-                    onChange={(e) => updateCreditCard(card.id, 'dueDate', e.target.value)}
-                  />
-                  <label className="flex gap-sm">
+                  <div className="date-field">
+                    <label>Due Date:</label>
                     <input 
-                      type="checkbox" 
-                      checked={card.autoPayment}
-                      onChange={(e) => updateCreditCard(card.id, 'autoPayment', e.target.checked)}
+                      type="date" 
+                      value={card.dueDate}
+                      onChange={(e) => updateCreditCard(card.id, 'dueDate', e.target.value)}
                     />
-                    Auto-pay on due date
-                  </label>
-                  <button onClick={() => removeCreditCard(card.id)}>Remove</button>
+                  </div>
+                  <div className="date-field">
+                    <label>Pay Date:</label>
+                    <input 
+                      type="date" 
+                      value={card.payDate}
+                      onChange={(e) => updateCreditCard(card.id, 'payDate', e.target.value)}
+                      placeholder="Optional - uses due date if empty"
+                    />
+                  </div>
+                  <button className="remove-btn" onClick={() => removeCreditCard(card.id)}>Remove</button>
                 </div>
+                {/* Red alert if pay date is after due date */}
+                {card.dueDate && card.payDate && new Date(card.payDate) > new Date(card.dueDate) && (
+                  <div className="alert-danger">
+                    ⚠️ Pay date is after due date - this may incur late fees!
+                  </div>
+                )}
               </div>
             ))}
             
@@ -493,7 +570,7 @@ function App() {
                     value={expense.nextDueDate}
                     onChange={(e) => updateRecurringExpense(expense.id, 'nextDueDate', e.target.value)}
                   />
-                  <button onClick={() => removeRecurringExpense(expense.id)}>Remove</button>
+                  <button className="remove-btn" onClick={() => removeRecurringExpense(expense.id)}>Remove</button>
                 </div>
               </div>
             ))}
@@ -538,7 +615,7 @@ function App() {
                     value={expense.date}
                     onChange={(e) => updateOneTimeExpense(expense.id, 'date', e.target.value)}
                   />
-                  <button onClick={() => removeOneTimeExpense(expense.id)}>Remove</button>
+                  <button className="remove-btn" onClick={() => removeOneTimeExpense(expense.id)}>Remove</button>
                 </div>
               </div>
             ))}
@@ -642,6 +719,59 @@ function App() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Flow Breakdown - Full Width Bottom Section */}
+      <div className="sankey-section">
+        <div className="sankey-container">
+          <h2>Income vs Expenses Breakdown</h2>
+          <p>Totals for the next {projectionDays} days</p>
+          
+          <div className="flow-breakdown">
+            {(() => {
+              const data = getFlowBreakdownData()
+              return (
+                <>
+                  <div className="flow-column">
+                    <h3>Income Sources</h3>
+                    {Object.entries(data.incomeBySource).map(([name, amount]) => {
+                      const percentage = data.totalIncome > 0 ? ((amount / data.totalIncome) * 100).toFixed(1) : 0
+                      return (
+                        <div key={name} className="flow-item income-item-flow">
+                          <div className="flow-label">{name}</div>
+                          <div className="flow-amount">${amount.toFixed(0)} ({percentage}%)</div>
+                        </div>
+                      )
+                    })}
+                    <div className="flow-total">
+                      Total Income: ${data.totalIncome.toFixed(0)}
+                    </div>
+                  </div>
+                  
+                  <div className="flow-column">
+                    <h3>Expense Categories</h3>
+                    {[
+                      ...Object.entries(data.expensesByCategory).map(([name, amount]) => ({ name, amount, type: 'category' })),
+                      ...Object.entries(data.creditCardExpenses).map(([name, amount]) => ({ name, amount, type: 'credit' })),
+                      ...Object.entries(data.oneTimeExpensesByName).map(([name, amount]) => ({ name, amount, type: 'onetime' }))
+                    ].map(({ name, amount, type }) => {
+                      const percentage = data.totalExpenses > 0 ? ((amount / data.totalExpenses) * 100).toFixed(1) : 0
+                      return (
+                        <div key={name} className={`flow-item expense-item-flow ${type}`}>
+                          <div className="flow-label">{name}</div>
+                          <div className="flow-amount">${amount.toFixed(0)} ({percentage}%)</div>
+                        </div>
+                      )
+                    })}
+                    <div className="flow-total">
+                      Total Expenses: ${data.totalExpenses.toFixed(0)}
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       </div>

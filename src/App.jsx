@@ -1,7 +1,66 @@
 import { useState, useEffect } from 'react'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { ResponsiveSankey } from '@nivo/sankey'
 import './App.css'
+
+// Taglines collection (module scope to avoid effect dependency warnings)
+const TAGLINES = [
+  "No judgement, no API integration, no Plaid",
+  "We won't remind you how much you spent last summer",
+  "I don't care if 6 months ago you overdid it in St. Tropez",
+  "Don't care how many table services Plaid will remind you you have done 9 years ago",
+  "That vintage wine collection? Not our business.",
+  "We don't care about your art gallery splurges.",
+  "We won't mention the boat you bought drunk.",
+  "Those designer shoes from last spring? Forgotten.",
+  "We don't judge your DoorDash addiction.",
+  "Fresh start, fresh cash flow.",
+  "We're not your financial therapist.",
+  "Clean slate, dirty money welcome.",
+  "No receipts, no regrets, no reminders.",
+  "Your financial past can stay in therapy.",
+  "We don't do financial archaeology.",
+  "No transaction shaming since never.",
+  "We won't connect to your mistakes.",
+  "Your bank statements are safe from us.",
+  "No access to your financial trauma.",
+  "Overdid it in St. Tropez in 2017? We're not Plaid, we don't care.",
+  "Blew your savings in St. Tropez? We're not your bank app.",
+  "That St. Tropez summer of 2018? Not our circus, not our spreadsheet.",
+  "St. Tropez bottle service bills? We don't keep receipts.",
+  "Spent rent money in St. Tropez? We're not here to judge.",
+  "Your St. Tropez yacht week disaster? Ancient history.",
+  "Maxed out your cards in Mykonos? We're not Plaid, we don't remember.",
+  "Went broke in Ibiza? We're not your banking app.",
+  "That Coachella weekend that cost 3 months rent? We won't remind you.",
+  "Tulum ate your emergency fund? We don't do financial autopsies.",
+  "Your Miami boat party receipts? We don't sync with shame.",
+  "Aspen ski trip broke the bank? We're not Mint, we don't mention it.",
+  "That Cloud Nine champagne tab in Aspen? We won't bring it up.",
+  "Spent your bonus in Dubai? We're not keeping score.",
+  "Blew through savings in the Hamptons? We don't track regrets.",
+  "Casa de Campo golf week emptied your account? We won't mention it.",
+  "That Mayfair shopping spree? We're not your financial conscience.",
+  "Loro Piana summer walks cost more than most cars? We don't care.",
+  "Aspen powder days emptied your account? We won't remind you.",
+  "That Aspen weekend cost more than your car? We're not Plaid, we don't judge.",
+  "Spent Christmas money on Aspen lift tickets? Ancient history.",
+  "Aspen après-ski bills broke the bank? We don't keep receipts.",
+  "Your Aspen lodge weekend? We won't bring it up.",
+  "Your Bagatelle brunch bills? We don't keep tabs.",
+  "Dropped your rent money at Bagatelle? We're not your conscience.",
+  "That Bagatelle champagne parade from 2018? We won't mention it.",
+  "Seaspice ate your emergency fund? We don't do financial autopsies.",
+  "That Seaspice dinner cost more than your mortgage? We won't remind you.",
+  "Blew your savings on Seaspice weekends? We're not keeping track.",
+  "Your Seaspice yacht party receipts? Not our problem.",
+  "Medium Cool bottle service 2 months ago? We're not your transaction history.",
+  "That Soho House weekend destroyed your budget? We don't care.",
+  "Art Basel spending spree? We won't bring it up.",
+  "That designer handbag impulse buy? We're not Plaid, we don't care.",
+  "Invested in that friend's startup? We're not your transaction history.",
+  "Splurged on that watch collection? We're not Plaid, we're not counting."
+]
 
 function App() {
   const [startingBalance, setStartingBalance] = useState(0)
@@ -16,9 +75,9 @@ function App() {
   const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0)
   const [showHelpModal, setShowHelpModal] = useState(false)
 
-  // Load data from sessionStorage on component mount
+  // Load data from localStorage on component mount
   useEffect(() => {
-    const savedData = sessionStorage.getItem('cashflowData')
+    const savedData = localStorage.getItem('cashflowData')
     if (savedData) {
       const data = JSON.parse(savedData)
       setStartingBalance(data.startingBalance || 0)
@@ -33,7 +92,7 @@ function App() {
     }
   }, [])
 
-  // Save data to sessionStorage whenever state changes
+  // Save data to localStorage whenever state changes
   useEffect(() => {
     const dataToSave = {
       startingBalance,
@@ -46,7 +105,7 @@ function App() {
       activeTab,
       chartType
     }
-    sessionStorage.setItem('cashflowData', JSON.stringify(dataToSave))
+    localStorage.setItem('cashflowData', JSON.stringify(dataToSave))
   }, [startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays, showTransactionDaysOnly, activeTab, chartType])
 
   const addIncome = () => {
@@ -130,83 +189,19 @@ function App() {
     setOneTimeExpenses(oneTimeExpenses.filter(expense => expense.id !== id))
   }
 
-  // Taglines collection
-  const taglines = [
-    "No judgement, no API integration, no Plaid",
-    "We won't remind you how much you spent last summer",
-    "I don't care if 6 months ago you overdid it in St. Tropez",
-    "Don't care how many table services Plaid will remind you you have done 9 years ago",
-    "That vintage wine collection? Not our business.",
-    "We don't care about your art gallery splurges.",
-    "We won't mention the boat you bought drunk.",
-    "Those designer shoes from last spring? Forgotten.",
-    "We don't judge your DoorDash addiction.",
-    "Fresh start, fresh cash flow.",
-    "We're not your financial therapist.",
-    "Clean slate, dirty money welcome.",
-    "No receipts, no regrets, no reminders.",
-    "Your financial past can stay in therapy.",
-    "We don't do financial archaeology.",
-    "No transaction shaming since never.",
-    "We won't connect to your mistakes.",
-    "Your bank statements are safe from us.",
-    "No access to your financial trauma.",
-    "Overdid it in St. Tropez in 2017? We're not Plaid, we don't care.",
-    "Blew your savings in St. Tropez? We're not your bank app.",
-    "That St. Tropez summer of 2018? Not our circus, not our spreadsheet.",
-    "St. Tropez bottle service bills? We don't keep receipts.",
-    "Spent rent money in St. Tropez? We're not here to judge.",
-    "Your St. Tropez yacht week disaster? Ancient history.",
-    "Maxed out your cards in Mykonos? We're not Plaid, we don't remember.",
-    "Went broke in Ibiza? We're not your banking app.",
-    "That Coachella weekend that cost 3 months rent? We won't remind you.",
-    "Tulum ate your emergency fund? We don't do financial autopsies.",
-    "Your Miami boat party receipts? We don't sync with shame.",
-    "Aspen ski trip broke the bank? We're not Mint, we don't mention it.",
-    "That Cloud Nine champagne tab in Aspen? We won't bring it up.",
-    "Spent your bonus in Dubai? We're not keeping score.",
-    "Blew through savings in the Hamptons? We don't track regrets.",
-    "Casa de Campo golf week emptied your account? We won't mention it.",
-    "That Mayfair shopping spree? We're not your financial conscience.",
-    "Loro Piana summer walks cost more than most cars? We don't care.",
-    "Aspen powder days emptied your account? We won't remind you.",
-    "That Aspen weekend cost more than your car? We're not Plaid, we don't judge.",
-    "Spent Christmas money on Aspen lift tickets? Ancient history.",
-    "Aspen après-ski bills broke the bank? We don't keep receipts.",
-    "Your Aspen lodge weekend? We won't bring it up.",
-    "Your Bagatelle brunch bills? We don't keep tabs.",
-    "Dropped your rent money at Bagatelle? We're not your conscience.",
-    "That Bagatelle champagne parade from 2018? We won't mention it.",
-    "Seaspice ate your emergency fund? We don't do financial autopsies.",
-    "That Seaspice dinner cost more than your mortgage? We won't remind you.",
-    "Blew your savings on Seaspice weekends? We're not keeping track.",
-    "Your Seaspice yacht party receipts? Not our problem.",
-    "Medium Cool bottle service 2 months ago? We're not your transaction history.",
-    "That Soho House weekend destroyed your budget? We don't care.",
-    "Art Basel spending spree? We won't bring it up.",
-    "That designer handbag impulse buy? We're not Plaid, we don't care.",
-    "Invested in that friend's startup? We're not your transaction history.",
-    "Splurged on that watch collection? We're not Plaid, we're not counting."
-  ]
-
-  // Get a truly random tagline index
-  const getRandomTaglineIndex = () => {
-    return Math.floor(Math.random() * taglines.length)
-  }
-
   // Random tagline on page refresh
   useEffect(() => {
-    setCurrentTaglineIndex(getRandomTaglineIndex())
+    setCurrentTaglineIndex(Math.floor(Math.random() * TAGLINES.length))
   }, [])
 
   // Random tagline on tab change
   useEffect(() => {
-    setCurrentTaglineIndex(getRandomTaglineIndex())
+    setCurrentTaglineIndex(Math.floor(Math.random() * TAGLINES.length))
   }, [activeTab])
 
   // Random tagline on projection days change
   useEffect(() => {
-    setCurrentTaglineIndex(getRandomTaglineIndex())
+    setCurrentTaglineIndex(Math.floor(Math.random() * TAGLINES.length))
   }, [projectionDays])
 
   const calculateCashflow = (days = projectionDays) => {
@@ -240,47 +235,55 @@ function App() {
           return daysDiff >= 0 && daysDiff % 7 === 0
         case 'bi-weekly':
           return daysDiff >= 0 && daysDiff % 14 === 0
-        case 'monthly':
+        case 'monthly': {
           // For monthly, check if it's the same day of month as start date
           // Handle month-end cases properly
           const startDay = start.getDate()
           const currentDay = current.getDate()
           const currentMonth = current.getMonth()
           const currentYear = current.getFullYear()
-          
+
           // Get the last day of current month
           const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
-          
+
           // If start date is beyond current month's days, use last day of month
           const targetDay = Math.min(startDay, lastDayOfMonth)
-          
-          return currentDay === targetDay && 
-                 (current.getFullYear() > start.getFullYear() || 
-                  current.getMonth() > start.getMonth() ||
-                  (current.getMonth() === start.getMonth() && current.getFullYear() === start.getFullYear()))
-        case '15th-and-last':
+
+          return (
+            currentDay === targetDay &&
+            (current.getFullYear() > start.getFullYear() ||
+              current.getMonth() > start.getMonth() ||
+              (current.getMonth() === start.getMonth() && current.getFullYear() === start.getFullYear()))
+          )
+        }
+        case '15th-and-last': {
           // Special case for 15th and last business day of month
           const currentMonth15th = current.getMonth()
           const currentYear15th = current.getFullYear()
           const currentDay15th = current.getDate()
-          
+
           // If start date is after the 15th, wait until 15th of next month
-          if (start.getDate() > 15 && current.getMonth() === start.getMonth() && current.getFullYear() === start.getFullYear()) {
+          if (
+            start.getDate() > 15 &&
+            current.getMonth() === start.getMonth() &&
+            current.getFullYear() === start.getFullYear()
+          ) {
             return false
           }
-          
+
           // Check if current date is 15th of any month after start month
           if (currentDay15th === 15 && current >= start) {
             return true
           }
-          
+
           // Check if current date is last business day of month
           const lastBusinessDay = getLastBusinessDay(currentYear15th, currentMonth15th)
           if (current.toDateString() === lastBusinessDay.toDateString() && current >= start) {
             return true
           }
-          
+
           return false
+        }
         default:
           return false
       }
@@ -398,7 +401,7 @@ function App() {
   }
 
   // Custom tooltip for the chart
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       const actualExpenses = Math.abs(data.expenses) // Convert back to positive for display
@@ -407,7 +410,7 @@ function App() {
           <p className="tooltip-date">{`${data.shortDate}: ${data.date}`}</p>
           <p className="tooltip-balance">
             Balance: <span className={data.balance < 0 ? 'negative' : 'positive'}>
-              ${data.balance < 0 ? '(' + Math.abs(data.balance).toFixed(2) + ')' : data.balance.toFixed(2)}
+              ${Math.abs(data.balance).toFixed(2)}
             </span>
           </p>
           <p className="tooltip-income">Income: ${data.income.toFixed(2)}</p>
@@ -599,15 +602,6 @@ function App() {
   }
 
   const exportInputData = () => {
-    const inputData = {
-      startingBalance,
-      incomes,
-      creditCards,
-      recurringExpenses,
-      oneTimeExpenses,
-      projectionDays
-    }
-    
     // Create CSV content with structured sections
     const csvLines = []
     
@@ -704,17 +698,17 @@ function App() {
           
           // Process data based on current section
           switch (currentSection) {
-            case 'STARTING_BALANCE':
+            case 'STARTING_BALANCE': {
               const balance = parseFloat(line)
               if (!isNaN(balance)) newStartingBalance = balance
               break
-              
-            case 'PROJECTION_DAYS':
+            }
+            case 'PROJECTION_DAYS': {
               const days = parseInt(line)
               if (!isNaN(days) && days > 0) newProjectionDays = days
               break
-              
-            case 'INCOME_SOURCES':
+            }
+            case 'INCOME_SOURCES': {
               const incomeData = parseCsvLine(line)
               if (incomeData.length >= 5) {
                 newIncomes.push({
@@ -726,8 +720,8 @@ function App() {
                 })
               }
               break
-              
-            case 'CREDIT_CARDS':
+            }
+            case 'CREDIT_CARDS': {
               const cardData = parseCsvLine(line)
               if (cardData.length >= 5) {
                 newCreditCards.push({
@@ -739,8 +733,8 @@ function App() {
                 })
               }
               break
-              
-            case 'RECURRING_EXPENSES':
+            }
+            case 'RECURRING_EXPENSES': {
               const recurringData = parseCsvLine(line)
               if (recurringData.length >= 6) {
                 newRecurringExpenses.push({
@@ -753,8 +747,8 @@ function App() {
                 })
               }
               break
-              
-            case 'ONE_TIME_EXPENSES':
+            }
+            case 'ONE_TIME_EXPENSES': {
               const onetimeData = parseCsvLine(line)
               if (onetimeData.length >= 5) {
                 newOneTimeExpenses.push({
@@ -766,6 +760,7 @@ function App() {
                 })
               }
               break
+            }
           }
         }
         
@@ -833,12 +828,6 @@ function App() {
           onClick={() => setActiveTab('insights')}
         >
           Insights
-        </button>
-        <button 
-          className={`tab-button ${activeTab === 'export-pdf' ? 'active' : ''}`}
-          onClick={() => setActiveTab('export-pdf')}
-        >
-          Export to PDF
         </button>
       </div>
       
@@ -1590,9 +1579,27 @@ function App() {
           It's about the next {projectionDays} days, judgement free cashflow
         </div>
         <div className="tagline-main">
-          {taglines[currentTaglineIndex]}
+          {TAGLINES[currentTaglineIndex]}
         </div>
       </div>
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="modal-overlay" onClick={() => setShowHelpModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Data Storage & Privacy</h3>
+              <button className="modal-close" aria-label="Close" onClick={() => setShowHelpModal(false)}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>Your inputs are stored locally in your browser using localStorage. No servers, no banks, no third parties.</p>
+              <p>You can export and import your data via CSV from the Inputs tab. Clearing your browser storage will remove saved data.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

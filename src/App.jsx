@@ -1,66 +1,13 @@
-import { useState, useEffect } from 'react'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { useState, useEffect, useMemo } from 'react'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts'
 import { ResponsiveSankey } from '@nivo/sankey'
 import './App.css'
-
-// Taglines collection (module scope to avoid effect dependency warnings)
-const TAGLINES = [
-  "No judgement, no API integration, no Plaid",
-  "We won't remind you how much you spent last summer",
-  "I don't care if 6 months ago you overdid it in St. Tropez",
-  "Don't care how many table services Plaid will remind you you have done 9 years ago",
-  "That vintage wine collection? Not our business.",
-  "We don't care about your art gallery splurges.",
-  "We won't mention the boat you bought drunk.",
-  "Those designer shoes from last spring? Forgotten.",
-  "We don't judge your DoorDash addiction.",
-  "Fresh start, fresh cash flow.",
-  "We're not your financial therapist.",
-  "Clean slate, dirty money welcome.",
-  "No receipts, no regrets, no reminders.",
-  "Your financial past can stay in therapy.",
-  "We don't do financial archaeology.",
-  "No transaction shaming since never.",
-  "We won't connect to your mistakes.",
-  "Your bank statements are safe from us.",
-  "No access to your financial trauma.",
-  "Overdid it in St. Tropez in 2017? We're not Plaid, we don't care.",
-  "Blew your savings in St. Tropez? We're not your bank app.",
-  "That St. Tropez summer of 2018? Not our circus, not our spreadsheet.",
-  "St. Tropez bottle service bills? We don't keep receipts.",
-  "Spent rent money in St. Tropez? We're not here to judge.",
-  "Your St. Tropez yacht week disaster? Ancient history.",
-  "Maxed out your cards in Mykonos? We're not Plaid, we don't remember.",
-  "Went broke in Ibiza? We're not your banking app.",
-  "That Coachella weekend that cost 3 months rent? We won't remind you.",
-  "Tulum ate your emergency fund? We don't do financial autopsies.",
-  "Your Miami boat party receipts? We don't sync with shame.",
-  "Aspen ski trip broke the bank? We're not Mint, we don't mention it.",
-  "That Cloud Nine champagne tab in Aspen? We won't bring it up.",
-  "Spent your bonus in Dubai? We're not keeping score.",
-  "Blew through savings in the Hamptons? We don't track regrets.",
-  "Casa de Campo golf week emptied your account? We won't mention it.",
-  "That Mayfair shopping spree? We're not your financial conscience.",
-  "Loro Piana summer walks cost more than most cars? We don't care.",
-  "Aspen powder days emptied your account? We won't remind you.",
-  "That Aspen weekend cost more than your car? We're not Plaid, we don't judge.",
-  "Spent Christmas money on Aspen lift tickets? Ancient history.",
-  "Aspen après-ski bills broke the bank? We don't keep receipts.",
-  "Your Aspen lodge weekend? We won't bring it up.",
-  "Your Bagatelle brunch bills? We don't keep tabs.",
-  "Dropped your rent money at Bagatelle? We're not your conscience.",
-  "That Bagatelle champagne parade from 2018? We won't mention it.",
-  "Seaspice ate your emergency fund? We don't do financial autopsies.",
-  "That Seaspice dinner cost more than your mortgage? We won't remind you.",
-  "Blew your savings on Seaspice weekends? We're not keeping track.",
-  "Your Seaspice yacht party receipts? Not our problem.",
-  "Medium Cool bottle service 2 months ago? We're not your transaction history.",
-  "That Soho House weekend destroyed your budget? We don't care.",
-  "Art Basel spending spree? We won't bring it up.",
-  "That designer handbag impulse buy? We're not Plaid, we don't care.",
-  "Invested in that friend's startup? We're not your transaction history.",
-  "Splurged on that watch collection? We're not Plaid, we're not counting."
-]
+import { calculateCashflow } from './lib/cashflow.js'
+import { getFlowBreakdownData, getSankeyData } from './lib/analysis.js'
+import { exportProjectionCSV, exportInputsCSV, importInputsCSV } from './lib/csv.js'
+import { loadState, debouncedSaveState } from './lib/storage.js'
+import { formatShortDate, formatChartCurrency, formatNegativeCurrency } from './lib/format.js'
+import ChartErrorBoundary from './components/ChartErrorBoundary.jsx'
 
 function App() {
   const [startingBalance, setStartingBalance] = useState(0)
@@ -75,26 +22,52 @@ function App() {
   const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0)
   const [showHelpModal, setShowHelpModal] = useState(false)
 
+  // Handle keyboard navigation for tabs
+  const handleTabKeyDown = (event, tabName) => {
+    const tabs = ['inputs', 'projection', 'insights', 'export-pdf']
+    const currentIndex = tabs.indexOf(activeTab)
+    
+    switch (event.key) {
+      case 'ArrowLeft':
+        event.preventDefault()
+        const prevIndex = currentIndex === 0 ? tabs.length - 1 : currentIndex - 1
+        setActiveTab(tabs[prevIndex])
+        break
+      case 'ArrowRight':
+        event.preventDefault()
+        const nextIndex = currentIndex === tabs.length - 1 ? 0 : currentIndex + 1
+        setActiveTab(tabs[nextIndex])
+        break
+      case 'Home':
+        event.preventDefault()
+        setActiveTab(tabs[0])
+        break
+      case 'End':
+        event.preventDefault()
+        setActiveTab(tabs[tabs.length - 1])
+        break
+    }
+  }
+
   // Load data from localStorage on component mount
   useEffect(() => {
-    const savedData = localStorage.getItem('cashflowData')
+    const savedData = loadState()
     if (savedData) {
-      const data = JSON.parse(savedData)
-      setStartingBalance(data.startingBalance || 0)
-      setIncomes(data.incomes || [])
-      setCreditCards(data.creditCards || [])
-      setRecurringExpenses(data.recurringExpenses || [])
-      setOneTimeExpenses(data.oneTimeExpenses || [])
-      setProjectionDays(data.projectionDays || 30)
-      setShowTransactionDaysOnly(data.showTransactionDaysOnly || false)
-      setActiveTab(data.activeTab || 'inputs')
-      setChartType(data.chartType || 'line')
+      setStartingBalance(savedData.startingBalance || 0)
+      setIncomes(savedData.incomes || [])
+      setCreditCards(savedData.creditCards || [])
+      setRecurringExpenses(savedData.recurringExpenses || [])
+      setOneTimeExpenses(savedData.oneTimeExpenses || [])
+      setProjectionDays(savedData.projectionDays || 30)
+      setShowTransactionDaysOnly(savedData.showTransactionDaysOnly || false)
+      setActiveTab(savedData.activeTab || 'inputs')
+      setChartType(savedData.chartType || 'line')
     }
   }, [])
 
-  // Save data to localStorage whenever state changes
+  // Save data to localStorage whenever state changes (debounced)
   useEffect(() => {
-    const dataToSave = {
+    debouncedSaveState({
       startingBalance,
       incomes,
       creditCards,
@@ -104,13 +77,12 @@ function App() {
       showTransactionDaysOnly,
       activeTab,
       chartType
-    }
-    localStorage.setItem('cashflowData', JSON.stringify(dataToSave))
+    })
   }, [startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays, showTransactionDaysOnly, activeTab, chartType])
 
   const addIncome = () => {
     setIncomes([...incomes, {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       name: '',
       amount: 0,
       frequency: 'monthly',
@@ -130,7 +102,7 @@ function App() {
 
   const addCreditCard = () => {
     setCreditCards([...creditCards, {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       name: '',
       balance: 0,
       dueDate: '',
@@ -150,7 +122,7 @@ function App() {
 
   const addRecurringExpense = () => {
     setRecurringExpenses([...recurringExpenses, {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       name: '',
       amount: 0,
       category: 'Other',
@@ -171,7 +143,7 @@ function App() {
 
   const addOneTimeExpense = () => {
     setOneTimeExpenses([...oneTimeExpenses, {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       name: '',
       amount: 0,
       category: 'Other',
@@ -189,173 +161,93 @@ function App() {
     setOneTimeExpenses(oneTimeExpenses.filter(expense => expense.id !== id))
   }
 
+  // Taglines collection
+  const taglines = [
+    "No judgement, no API integration, no Plaid",
+    "We won't remind you how much you spent last summer",
+    "I don't care if 6 months ago you overdid it in St. Tropez",
+    "Don't care how many table services Plaid will remind you you have done 9 years ago",
+    "That vintage wine collection? Not our business.",
+    "We don't care about your art gallery splurges.",
+    "We won't mention the boat you bought drunk.",
+    "Those designer shoes from last spring? Forgotten.",
+    "We don't judge your DoorDash addiction.",
+    "Fresh start, fresh cash flow.",
+    "We're not your financial therapist.",
+    "Clean slate, dirty money welcome.",
+    "No receipts, no regrets, no reminders.",
+    "Your financial past can stay in therapy.",
+    "We don't do financial archaeology.",
+    "No transaction shaming since never.",
+    "We won't connect to your mistakes.",
+    "Your bank statements are safe from us.",
+    "No access to your financial trauma.",
+    "Overdid it in St. Tropez in 2017? We're not Plaid, we don't care.",
+    "Blew your savings in St. Tropez? We're not your bank app.",
+    "That St. Tropez summer of 2018? Not our circus, not our spreadsheet.",
+    "St. Tropez bottle service bills? We don't keep receipts.",
+    "Spent rent money in St. Tropez? We're not here to judge.",
+    "Your St. Tropez yacht week disaster? Ancient history.",
+    "Maxed out your cards in Mykonos? We're not Plaid, we don't remember.",
+    "Went broke in Ibiza? We're not your banking app.",
+    "That Coachella weekend that cost 3 months rent? We won't remind you.",
+    "Tulum ate your emergency fund? We don't do financial autopsies.",
+    "Your Miami boat party receipts? We don't sync with shame.",
+    "Aspen ski trip broke the bank? We're not Mint, we don't mention it.",
+    "That Cloud Nine champagne tab in Aspen? We won't bring it up.",
+    "Spent your bonus in Dubai? We're not keeping score.",
+    "Blew through savings in the Hamptons? We don't track regrets.",
+    "Casa de Campo golf week emptied your account? We won't mention it.",
+    "That Mayfair shopping spree? We're not your financial conscience.",
+    "Loro Piana summer walks cost more than most cars? We don't care.",
+    "Aspen powder days emptied your account? We won't remind you.",
+    "That Aspen weekend cost more than your car? We're not Plaid, we don't judge.",
+    "Spent Christmas money on Aspen lift tickets? Ancient history.",
+    "Aspen après-ski bills broke the bank? We don't keep receipts.",
+    "Your Aspen lodge weekend? We won't bring it up.",
+    "Your Bagatelle brunch bills? We don't keep tabs.",
+    "Dropped your rent money at Bagatelle? We're not your conscience.",
+    "That Bagatelle champagne parade from 2018? We won't mention it.",
+    "Seaspice ate your emergency fund? We don't do financial autopsies.",
+    "That Seaspice dinner cost more than your mortgage? We won't remind you.",
+    "Blew your savings on Seaspice weekends? We're not keeping track.",
+    "Your Seaspice yacht party receipts? Not our problem.",
+    "Medium Cool bottle service 2 months ago? We're not your transaction history.",
+    "That Soho House weekend destroyed your budget? We don't care.",
+    "Art Basel spending spree? We won't bring it up.",
+    "That designer handbag impulse buy? We're not Plaid, we don't care.",
+    "Invested in that friend's startup? We're not your transaction history.",
+    "Splurged on that watch collection? We're not Plaid, we're not counting."
+  ]
+
+  // Get a truly random tagline index
+  const getRandomTaglineIndex = () => {
+    return Math.floor(Math.random() * taglines.length)
+  }
+
   // Random tagline on page refresh
   useEffect(() => {
-    setCurrentTaglineIndex(Math.floor(Math.random() * TAGLINES.length))
+    setCurrentTaglineIndex(getRandomTaglineIndex())
   }, [])
 
   // Random tagline on tab change
   useEffect(() => {
-    setCurrentTaglineIndex(Math.floor(Math.random() * TAGLINES.length))
+    setCurrentTaglineIndex(getRandomTaglineIndex())
   }, [activeTab])
 
   // Random tagline on projection days change
   useEffect(() => {
-    setCurrentTaglineIndex(Math.floor(Math.random() * TAGLINES.length))
+    setCurrentTaglineIndex(getRandomTaglineIndex())
   }, [projectionDays])
 
-  const calculateCashflow = (days = projectionDays) => {
-    const today = new Date()
-    const cashflowData = []
-    
-    // Helper function to get last business day of a month
-    const getLastBusinessDay = (year, month) => {
-      let lastDay = new Date(year, month + 1, 0) // Last day of month
-      while (lastDay.getDay() === 0 || lastDay.getDay() === 6) {
-        lastDay.setDate(lastDay.getDate() - 1) // Move to previous day if weekend
-      }
-      return lastDay
-    }
-    
-    // Helper function to check if a date matches a recurring schedule
-    const isPaymentDue = (currentDate, startDate, frequency) => {
-      if (!startDate) return false
-      
-      const start = new Date(startDate)
-      const current = new Date(currentDate)
-      
-      // If current date is before start date, no payment is due
-      if (current < start) return false
-      
-      // Calculate days difference
-      const daysDiff = Math.floor((current - start) / (1000 * 60 * 60 * 24))
-      
-      switch (frequency) {
-        case 'weekly':
-          return daysDiff >= 0 && daysDiff % 7 === 0
-        case 'bi-weekly':
-          return daysDiff >= 0 && daysDiff % 14 === 0
-        case 'monthly': {
-          // For monthly, check if it's the same day of month as start date
-          // Handle month-end cases properly
-          const startDay = start.getDate()
-          const currentDay = current.getDate()
-          const currentMonth = current.getMonth()
-          const currentYear = current.getFullYear()
+  // Memoized cashflow data calculation
+  const getCashflowData = useMemo(() => {
+    return calculateCashflow(startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays)
+  }, [startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays])
 
-          // Get the last day of current month
-          const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
-
-          // If start date is beyond current month's days, use last day of month
-          const targetDay = Math.min(startDay, lastDayOfMonth)
-
-          return (
-            currentDay === targetDay &&
-            (current.getFullYear() > start.getFullYear() ||
-              current.getMonth() > start.getMonth() ||
-              (current.getMonth() === start.getMonth() && current.getFullYear() === start.getFullYear()))
-          )
-        }
-        case '15th-and-last': {
-          // Special case for 15th and last business day of month
-          const currentMonth15th = current.getMonth()
-          const currentYear15th = current.getFullYear()
-          const currentDay15th = current.getDate()
-
-          // If start date is after the 15th, wait until 15th of next month
-          if (
-            start.getDate() > 15 &&
-            current.getMonth() === start.getMonth() &&
-            current.getFullYear() === start.getFullYear()
-          ) {
-            return false
-          }
-
-          // Check if current date is 15th of any month after start month
-          if (currentDay15th === 15 && current >= start) {
-            return true
-          }
-
-          // Check if current date is last business day of month
-          const lastBusinessDay = getLastBusinessDay(currentYear15th, currentMonth15th)
-          if (current.toDateString() === lastBusinessDay.toDateString() && current >= start) {
-            return true
-          }
-
-          return false
-        }
-        default:
-          return false
-      }
-    }
-    
-    // Process each day sequentially
-    for (let i = 0; i < days; i++) {
-      const currentDate = new Date(today)
-      currentDate.setDate(today.getDate() + i)
-      
-      let dailyIncome = 0
-      let dailyExpenses = 0
-      
-      // Calculate income for this date
-      incomes.forEach(income => {
-        if (income.nextPayDate && income.amount && income.frequency) {
-          if (isPaymentDue(currentDate, income.nextPayDate, income.frequency)) {
-            dailyIncome += income.amount
-          }
-        }
-      })
-      
-      // Calculate recurring expenses for this date
-      recurringExpenses.forEach(expense => {
-        if (expense.nextDueDate && expense.amount && expense.frequency) {
-          if (isPaymentDue(currentDate, expense.nextDueDate, expense.frequency)) {
-            dailyExpenses += expense.amount
-          }
-        }
-      })
-      
-      // Calculate credit card payments (use payDate if provided, else dueDate)
-      creditCards.forEach(card => {
-        if (card.balance && (card.dueDate || card.payDate)) {
-          const paymentDate = new Date(card.payDate || card.dueDate)
-          if (currentDate.toDateString() === paymentDate.toDateString()) {
-            dailyExpenses += card.balance
-          }
-        }
-      })
-      
-      // Calculate one-time expenses
-      oneTimeExpenses.forEach(expense => {
-        if (expense.date && expense.amount) {
-          const expenseDate = new Date(expense.date)
-          if (currentDate.toDateString() === expenseDate.toDateString()) {
-            dailyExpenses += expense.amount
-          }
-        }
-      })
-      
-      // Calculate net change and running balance
-      const netChange = dailyIncome - dailyExpenses
-      const runningBalance = i === 0 ? 
-        startingBalance + netChange : 
-        cashflowData[i-1].runningBalance + netChange
-      
-      cashflowData.push({
-        date: new Date(currentDate),
-        income: dailyIncome,
-        expenses: dailyExpenses,
-        netChange,
-        runningBalance
-      })
-    }
-    
-    return cashflowData
-  }
-
-  // Format data for chart
-  const getChartData = () => {
-    const cashflowData = calculateCashflow(projectionDays)
+  // Memoized chart data calculation
+  const getChartData = useMemo(() => {
+    const cashflowData = getCashflowData
     let filteredData = cashflowData
     
     // Filter to show only transaction days if toggle is enabled
@@ -366,26 +258,26 @@ function App() {
     return filteredData.map((day, index) => ({
       day: index + 1,
       date: day.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }),
-      shortDate: `${day.date.getMonth() + 1}/${day.date.getDate()}`,
+      shortDate: formatShortDate(day.date),
       balance: day.runningBalance,
       income: day.income,
       expenses: -day.expenses, // Negative for waterfall chart (goes down from zero)
       netChange: day.netChange
     }))
-  }
+  }, [getCashflowData, showTransactionDaysOnly])
 
-  // Get filtered cashflow data for table display
-  const getFilteredCashflowData = () => {
-    const cashflowData = calculateCashflow(projectionDays)
+  // Memoized filtered cashflow data for table display
+  const getFilteredCashflowData = useMemo(() => {
+    const cashflowData = getCashflowData
     if (showTransactionDaysOnly) {
       return cashflowData.filter(day => day.income > 0 || day.expenses > 0)
     }
     return cashflowData
-  }
+  }, [getCashflowData, showTransactionDaysOnly])
 
-  // Get estimated balance and final date
-  const getEstimatedBalance = () => {
-    const cashflowData = calculateCashflow(projectionDays)
+  // Memoized estimated balance calculation
+  const getEstimatedBalance = useMemo(() => {
+    const cashflowData = getCashflowData
     if (cashflowData.length === 0) {
       return {
         balance: startingBalance,
@@ -398,10 +290,10 @@ function App() {
       balance: finalDay.runningBalance,
       date: finalDay.date
     }
-  }
+  }, [getCashflowData, startingBalance])
 
   // Custom tooltip for the chart
-  const CustomTooltip = ({ active, payload }) => {
+  const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       const actualExpenses = Math.abs(data.expenses) // Convert back to positive for display
@@ -410,7 +302,7 @@ function App() {
           <p className="tooltip-date">{`${data.shortDate}: ${data.date}`}</p>
           <p className="tooltip-balance">
             Balance: <span className={data.balance < 0 ? 'negative' : 'positive'}>
-              ${Math.abs(data.balance).toFixed(2)}
+              ${data.balance < 0 ? '(' + Math.abs(data.balance).toFixed(2) + ')' : data.balance.toFixed(2)}
             </span>
           </p>
           <p className="tooltip-income">Income: ${data.income.toFixed(2)}</p>
@@ -422,246 +314,32 @@ function App() {
     return null
   }
 
-  // Calculate flow breakdown data for visual display
-  const getFlowBreakdownData = () => {
-    // Calculate totals for the selected period
-    const incomeBySource = {}
-    const expensesByCategory = {}
-    const creditCardExpenses = {}
-    const oneTimeExpensesByName = {}
-    
-    let totalIncome = 0
-    let totalExpenses = 0
-    
-    // Calculate income by source (simplified approach)
-    incomes.forEach(income => {
-      if (income.name && income.amount) {
-        const occurrences = Math.floor(projectionDays / (
-          income.frequency === 'weekly' ? 7 : 
-          income.frequency === 'bi-weekly' ? 14 :
-          income.frequency === '15th-and-last' ? 15 : 30
-        ))
-        const totalAmount = income.amount * Math.max(1, occurrences)
-        incomeBySource[income.name] = totalAmount
-        totalIncome += totalAmount
-      }
-    })
-    
-    // Calculate recurring expenses by category
-    recurringExpenses.forEach(expense => {
-      if (expense.name && expense.category && expense.amount) {
-        const occurrences = Math.floor(projectionDays / (
-          expense.frequency === 'weekly' ? 7 : 
-          expense.frequency === 'bi-weekly' ? 14 : 30
-        ))
-        const totalAmount = expense.amount * Math.max(1, occurrences)
-        expensesByCategory[expense.category] = (expensesByCategory[expense.category] || 0) + totalAmount
-        totalExpenses += totalAmount
-      }
-    })
-    
-    // Calculate credit card expenses
-    creditCards.forEach(card => {
-      if (card.name && card.balance) {
-        creditCardExpenses[card.name] = card.balance
-        totalExpenses += card.balance
-      }
-    })
-    
-    // Calculate one-time expenses
-    oneTimeExpenses.forEach(expense => {
-      if (expense.name && expense.amount && expense.date) {
-        const expenseDate = new Date(expense.date)
-        const today = new Date()
-        const endDate = new Date(today.getTime() + projectionDays * 24 * 60 * 60 * 1000)
-        
-        if (expenseDate >= today && expenseDate <= endDate) {
-          oneTimeExpensesByName[expense.name] = expense.amount
-          totalExpenses += expense.amount
-        }
-      }
-    })
-    
-    return {
-      incomeBySource,
-      expensesByCategory,
-      creditCardExpenses,
-      oneTimeExpensesByName,
-      totalIncome,
-      totalExpenses
-    }
-  }
+  // Memoized flow breakdown calculation
+  const getFlowBreakdown = useMemo(() => {
+    return getFlowBreakdownData(incomes, recurringExpenses, creditCards, oneTimeExpenses, projectionDays)
+  }, [incomes, recurringExpenses, creditCards, oneTimeExpenses, projectionDays])
 
-  // Generate Sankey diagram data
-  const getSankeyData = () => {
-    try {
-      const flowData = getFlowBreakdownData()
-      
-      // Return empty data structure if no data
-      if (flowData.totalIncome === 0 && flowData.totalExpenses === 0) {
-        return {
-          nodes: [
-            { id: 'No Income Data' },
-            { id: 'No Expense Data' }
-          ],
-          links: []
-        }
-      }
-      
-      // Create nodes for income sources and expense categories
-      const incomeNodes = Object.keys(flowData.incomeBySource).map(name => ({ id: name }))
-      const expenseNodes = [
-        ...Object.keys(flowData.expensesByCategory).map(name => ({ id: name })),
-        ...Object.keys(flowData.creditCardExpenses).map(name => ({ id: `${name} (Credit)` })),
-        ...Object.keys(flowData.oneTimeExpensesByName).map(name => ({ id: `${name} (One-time)` }))
-      ]
-      
-      const nodes = [...incomeNodes, ...expenseNodes]
-      
-      // Create links based on proportional distribution
-      const links = []
-      const totalIncome = flowData.totalIncome
-      
-      if (totalIncome > 0 && incomeNodes.length > 0 && expenseNodes.length > 0) {
-        // Distribute income proportionally to expenses
-        const allExpenses = {
-          ...flowData.expensesByCategory,
-          ...Object.fromEntries(
-            Object.entries(flowData.creditCardExpenses).map(([k, v]) => [`${k} (Credit)`, v])
-          ),
-          ...Object.fromEntries(
-            Object.entries(flowData.oneTimeExpensesByName).map(([k, v]) => [`${k} (One-time)`, v])
-          )
-        }
-        
-        Object.entries(flowData.incomeBySource).forEach(([incomeName, incomeAmount]) => {
-          Object.entries(allExpenses).forEach(([expenseName, expenseAmount]) => {
-            const proportionalAmount = (incomeAmount / totalIncome) * expenseAmount
-            if (proportionalAmount > 0.01) { // Minimum threshold to avoid tiny links
-              links.push({
-                source: incomeName,
-                target: expenseName,
-                value: Math.round(proportionalAmount * 100) / 100 // Round to 2 decimal places
-              })
-            }
-          })
-        })
-      }
-      
-      // Ensure we have valid data structure
-      if (nodes.length === 0 || links.length === 0) {
-        return {
-          nodes: [
-            { id: 'Add Income' },
-            { id: 'Add Expenses' }
-          ],
-          links: []
-        }
-      }
-      
-      return { nodes, links }
-    } catch (error) {
-      console.error('Error generating Sankey data:', error)
-      return {
-        nodes: [
-          { id: 'Error Loading Data' }
-        ],
-        links: []
-      }
-    }
-  }
+  // Memoized Sankey diagram data
+  const getSankeyDiagramData = useMemo(() => {
+    const flowData = getFlowBreakdown
+    return getSankeyData(flowData)
+  }, [getFlowBreakdown])
 
 
   const exportToCSV = () => {
-    const cashflowData = getFilteredCashflowData()
-    
-    // Create CSV headers
-    const headers = ['Date', 'Income', 'Expenses', 'Net Change', 'Running Balance']
-    
-    // Create CSV rows
-    const csvRows = [
-      headers.join(','),
-      ...cashflowData.map(day => [
-        day.date.toLocaleDateString(),
-        day.income.toFixed(2),
-        day.expenses.toFixed(2),
-        day.netChange.toFixed(2),
-        day.runningBalance.toFixed(2)
-      ].join(','))
-    ]
-    
-    // Create and download the file
-    const csvContent = csvRows.join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `cashflow-projection-${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
-    window.URL.revokeObjectURL(url)
+    exportProjectionCSV(getFilteredCashflowData)
   }
 
   const exportInputData = () => {
-    // Create CSV content with structured sections
-    const csvLines = []
-    
-    // Header
-    csvLines.push('# Cashflow Management - Input Data Export')
-    csvLines.push(`# Exported on: ${new Date().toISOString()}`)
-    csvLines.push('')
-    
-    // Starting Balance
-    csvLines.push('[STARTING_BALANCE]')
-    csvLines.push('Amount')
-    csvLines.push(startingBalance.toString())
-    csvLines.push('')
-    
-    // Projection Days
-    csvLines.push('[PROJECTION_DAYS]')
-    csvLines.push('Days')
-    csvLines.push(projectionDays.toString())
-    csvLines.push('')
-    
-    // Income Sources
-    csvLines.push('[INCOME_SOURCES]')
-    csvLines.push('ID,Name,Amount,Frequency,NextPayDate')
-    incomes.forEach(income => {
-      csvLines.push(`${income.id},"${income.name}",${income.amount},${income.frequency},${income.nextPayDate}`)
-    })
-    csvLines.push('')
-    
-    // Credit Cards
-    csvLines.push('[CREDIT_CARDS]')
-    csvLines.push('ID,Name,Balance,DueDate,PayDate')
-    creditCards.forEach(card => {
-      csvLines.push(`${card.id},"${card.name}",${card.balance},${card.dueDate},${card.payDate}`)
-    })
-    csvLines.push('')
-    
-    // Recurring Expenses
-    csvLines.push('[RECURRING_EXPENSES]')
-    csvLines.push('ID,Name,Amount,Category,Frequency,NextDueDate')
-    recurringExpenses.forEach(expense => {
-      csvLines.push(`${expense.id},"${expense.name}",${expense.amount},${expense.category},${expense.frequency},${expense.nextDueDate}`)
-    })
-    csvLines.push('')
-    
-    // One-Time Expenses
-    csvLines.push('[ONE_TIME_EXPENSES]')
-    csvLines.push('ID,Name,Amount,Category,Date')
-    oneTimeExpenses.forEach(expense => {
-      csvLines.push(`${expense.id},"${expense.name}",${expense.amount},${expense.category},${expense.date}`)
-    })
-    
-    // Create and download the file
-    const csvContent = csvLines.join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `cashflow-input-data-${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
-    window.URL.revokeObjectURL(url)
+    const inputData = {
+      startingBalance,
+      incomes,
+      creditCards,
+      recurringExpenses,
+      oneTimeExpenses,
+      projectionDays
+    }
+    exportInputsCSV(inputData)
   }
 
   const importInputData = (event) => {
@@ -672,105 +350,15 @@ function App() {
     reader.onload = (e) => {
       try {
         const csvContent = e.target.result
-        const lines = csvContent.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'))
-        
-        let currentSection = null
-        let newStartingBalance = startingBalance
-        let newProjectionDays = projectionDays
-        let newIncomes = []
-        let newCreditCards = []
-        let newRecurringExpenses = []
-        let newOneTimeExpenses = []
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i]
-          
-          // Check for section headers
-          if (line.startsWith('[') && line.endsWith(']')) {
-            currentSection = line.slice(1, -1)
-            continue
-          }
-          
-          // Skip header rows (contains column names)
-          if (line.includes('ID,Name') || line.includes('Amount') || line.includes('Days')) {
-            continue
-          }
-          
-          // Process data based on current section
-          switch (currentSection) {
-            case 'STARTING_BALANCE': {
-              const balance = parseFloat(line)
-              if (!isNaN(balance)) newStartingBalance = balance
-              break
-            }
-            case 'PROJECTION_DAYS': {
-              const days = parseInt(line)
-              if (!isNaN(days) && days > 0) newProjectionDays = days
-              break
-            }
-            case 'INCOME_SOURCES': {
-              const incomeData = parseCsvLine(line)
-              if (incomeData.length >= 5) {
-                newIncomes.push({
-                  id: parseInt(incomeData[0]) || Date.now() + Math.random(),
-                  name: incomeData[1].replace(/"/g, ''),
-                  amount: parseFloat(incomeData[2]) || 0,
-                  frequency: incomeData[3] || 'monthly',
-                  nextPayDate: incomeData[4] || ''
-                })
-              }
-              break
-            }
-            case 'CREDIT_CARDS': {
-              const cardData = parseCsvLine(line)
-              if (cardData.length >= 5) {
-                newCreditCards.push({
-                  id: parseInt(cardData[0]) || Date.now() + Math.random(),
-                  name: cardData[1].replace(/"/g, ''),
-                  balance: parseFloat(cardData[2]) || 0,
-                  dueDate: cardData[3] || '',
-                  payDate: cardData[4] || ''
-                })
-              }
-              break
-            }
-            case 'RECURRING_EXPENSES': {
-              const recurringData = parseCsvLine(line)
-              if (recurringData.length >= 6) {
-                newRecurringExpenses.push({
-                  id: parseInt(recurringData[0]) || Date.now() + Math.random(),
-                  name: recurringData[1].replace(/"/g, ''),
-                  amount: parseFloat(recurringData[2]) || 0,
-                  category: recurringData[3] || 'Other',
-                  frequency: recurringData[4] || 'monthly',
-                  nextDueDate: recurringData[5] || ''
-                })
-              }
-              break
-            }
-            case 'ONE_TIME_EXPENSES': {
-              const onetimeData = parseCsvLine(line)
-              if (onetimeData.length >= 5) {
-                newOneTimeExpenses.push({
-                  id: parseInt(onetimeData[0]) || Date.now() + Math.random(),
-                  name: onetimeData[1].replace(/"/g, ''),
-                  amount: parseFloat(onetimeData[2]) || 0,
-                  category: onetimeData[3] || 'Other',
-                  date: onetimeData[4] || ''
-                })
-              }
-              break
-            }
-          }
-        }
+        const importedData = importInputsCSV(csvContent)
         
         // Update state with imported data
-        setStartingBalance(newStartingBalance)
-        setProjectionDays(newProjectionDays)
-        setIncomes(newIncomes)
-        setCreditCards(newCreditCards)
-        setRecurringExpenses(newRecurringExpenses)
-        setOneTimeExpenses(newOneTimeExpenses)
+        setStartingBalance(importedData.startingBalance)
+        setProjectionDays(importedData.projectionDays)
+        setIncomes(importedData.incomes)
+        setCreditCards(importedData.creditCards)
+        setRecurringExpenses(importedData.recurringExpenses)
+        setOneTimeExpenses(importedData.oneTimeExpenses)
         
         alert('Data imported successfully!')
       } catch (error) {
@@ -784,55 +372,63 @@ function App() {
     event.target.value = ''
   }
   
-  // Helper function to parse CSV line with proper comma handling
-  const parseCsvLine = (line) => {
-    const result = []
-    let current = ''
-    let inQuotes = false
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i]
-      
-      if (char === '"') {
-        inQuotes = !inQuotes
-      } else if (char === ',' && !inQuotes) {
-        result.push(current)
-        current = ''
-      } else {
-        current += char
-      }
-    }
-    result.push(current)
-    
-    return result
-  }
 
   return (
     <div className="app-container">
       {/* Tab Navigation */}
-      <div className="tab-navigation">
+      <div className="tab-navigation" role="tablist" aria-label="Cashflow management sections">
         <button 
+          role="tab"
+          id="tab-inputs"
+          aria-controls="panel-inputs"
+          aria-selected={activeTab === 'inputs'}
+          tabIndex={activeTab === 'inputs' ? 0 : -1}
           className={`tab-button ${activeTab === 'inputs' ? 'active' : ''}`}
           onClick={() => setActiveTab('inputs')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'inputs')}
         >
           Inputs
         </button>
         <button 
+          role="tab"
+          id="tab-projection"
+          aria-controls="panel-projection"
+          aria-selected={activeTab === 'projection'}
+          tabIndex={activeTab === 'projection' ? 0 : -1}
           className={`tab-button ${activeTab === 'projection' ? 'active' : ''}`}
           onClick={() => setActiveTab('projection')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'projection')}
         >
           Projection
         </button>
         <button 
+          role="tab"
+          id="tab-insights"
+          aria-controls="panel-insights"
+          aria-selected={activeTab === 'insights'}
+          tabIndex={activeTab === 'insights' ? 0 : -1}
           className={`tab-button ${activeTab === 'insights' ? 'active' : ''}`}
           onClick={() => setActiveTab('insights')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'insights')}
         >
           Insights
+        </button>
+        <button 
+          role="tab"
+          id="tab-export-pdf"
+          aria-controls="panel-export-pdf"
+          aria-selected={activeTab === 'export-pdf'}
+          tabIndex={activeTab === 'export-pdf' ? 0 : -1}
+          className={`tab-button ${activeTab === 'export-pdf' ? 'active' : ''}`}
+          onClick={() => setActiveTab('export-pdf')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'export-pdf')}
+        >
+          Export to PDF
         </button>
       </div>
       
       {activeTab === 'inputs' && (
-      <div className="main-layout">
+      <div role="tabpanel" id="panel-inputs" aria-labelledby="tab-inputs" className="main-layout">
         {/* Left Panel - Inputs */}
         <div className="inputs-panel">
           <h2>Inputs</h2>
@@ -841,10 +437,11 @@ function App() {
             <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
               <h3 style={{ margin: 0 }}>Data Management</h3>
               <div className="flex gap-md" style={{ alignItems: 'center' }}>
-                <button className="download" onClick={exportInputData}>Export Data</button>
+                <button className="download" onClick={exportInputData} aria-label="Export input data as CSV file">Export Data</button>
                 <button 
                   className="download" 
                   onClick={() => document.getElementById('import-file-input').click()}
+                  aria-label="Import input data from CSV file"
                 >
                   Import Data
                 </button>
@@ -883,13 +480,20 @@ function App() {
           </div>
 
           <div className="card">
-            <h3>Starting Balance</h3>
+            <label htmlFor="starting-balance">
+              <h3>Starting Balance</h3>
+            </label>
             <input 
+              id="starting-balance"
               type="number" 
               placeholder="$0.00" 
               value={startingBalance || ''}
               onChange={(e) => setStartingBalance(parseFloat(e.target.value) || 0)}
+              aria-describedby="starting-balance-desc"
             />
+            <div id="starting-balance-desc" className="sr-only">
+              Enter your current account balance in dollars
+            </div>
           </div>
 
           <div className="card">
@@ -900,45 +504,71 @@ function App() {
               <div key={income.id} className="income-item mb-md">
                 <div className="flex gap-md mb-sm">
                   <div className="input-group">
-                    <label>Income Name:</label>
+                    <label htmlFor={`income-name-${income.id}`}>Income Name:</label>
                     <input 
+                      id={`income-name-${income.id}`}
                       type="text" 
                       placeholder="e.g., Salary, Freelance"
                       value={income.name}
                       onChange={(e) => updateIncome(income.id, 'name', e.target.value)}
+                      aria-describedby={`income-name-desc-${income.id}`}
                     />
+                    <div id={`income-name-desc-${income.id}`} className="sr-only">
+                      Name for this income source
+                    </div>
                   </div>
                   <div className="input-group">
-                    <label>Amount:</label>
+                    <label htmlFor={`income-amount-${income.id}`}>Amount:</label>
                     <input 
+                      id={`income-amount-${income.id}`}
                       type="number" 
                       placeholder="0.00"
                       value={income.amount || ''}
                       onChange={(e) => updateIncome(income.id, 'amount', parseFloat(e.target.value) || 0)}
+                      aria-describedby={`income-amount-desc-${income.id}`}
                     />
+                    <div id={`income-amount-desc-${income.id}`} className="sr-only">
+                      Dollar amount for this income source
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-md mb-sm">
-                  <select 
-                    value={income.frequency} 
-                    onChange={(e) => updateIncome(income.id, 'frequency', e.target.value)}
+                  <div className="input-group">
+                    <label htmlFor={`income-frequency-${income.id}`} className="sr-only">Payment Frequency</label>
+                    <select 
+                      id={`income-frequency-${income.id}`}
+                      value={income.frequency} 
+                      onChange={(e) => updateIncome(income.id, 'frequency', e.target.value)}
+                      aria-label="Payment frequency"
+                    >
+                      <option value="weekly">Weekly</option>
+                      <option value="bi-weekly">Bi-weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="15th-and-last">15th and Last of Month</option>
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label htmlFor={`income-date-${income.id}`} className="sr-only">Next Payment Date</label>
+                    <input 
+                      id={`income-date-${income.id}`}
+                      type="date" 
+                      value={income.nextPayDate}
+                      onChange={(e) => updateIncome(income.id, 'nextPayDate', e.target.value)}
+                      aria-label="Next payment date"
+                    />
+                  </div>
+                  <button 
+                    className="remove-btn" 
+                    onClick={() => removeIncome(income.id)}
+                    aria-label={`Remove ${income.name || 'income source'}`}
                   >
-                    <option value="weekly">Weekly</option>
-                    <option value="bi-weekly">Bi-weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="15th-and-last">15th and Last of Month</option>
-                  </select>
-                  <input 
-                    type="date" 
-                    value={income.nextPayDate}
-                    onChange={(e) => updateIncome(income.id, 'nextPayDate', e.target.value)}
-                  />
-                  <button className="remove-btn" onClick={() => removeIncome(income.id)}>Remove</button>
+                    Remove
+                  </button>
                 </div>
               </div>
             ))}
             
-            <button className="add-button" onClick={addIncome}>+ Add Income</button>
+            <button className="add-button" onClick={addIncome} aria-label="Add new income source">+ Add Income</button>
           </div>
 
           <div className="card">
@@ -996,7 +626,7 @@ function App() {
               </div>
             ))}
             
-            <button className="add-button" onClick={addCreditCard}>+ Add Credit Card</button>
+            <button className="add-button" onClick={addCreditCard} aria-label="Add new credit card">+ Add Credit Card</button>
           </div>
 
           <div className="card">
@@ -1056,7 +686,7 @@ function App() {
               </div>
             ))}
             
-            <button className="add-button" onClick={addRecurringExpense}>+ Add Expense</button>
+            <button className="add-button" onClick={addRecurringExpense} aria-label="Add new recurring expense">+ Add Expense</button>
           </div>
 
           <div className="card">
@@ -1107,7 +737,7 @@ function App() {
               </div>
             ))}
             
-            <button className="add-button" onClick={addOneTimeExpense}>+ Add One-Time Expense</button>
+            <button className="add-button" onClick={addOneTimeExpense} aria-label="Add new one-time expense">+ Add One-Time Expense</button>
           </div>
         </div>
 
@@ -1126,7 +756,7 @@ function App() {
             </div>
             <div className="metric-card">
               {(() => {
-                const estimated = getEstimatedBalance()
+                const estimated = getEstimatedBalance
                 const month = estimated.date.getMonth() + 1
                 const day = estimated.date.getDate()
                 const shortDate = `${month}/${day}`
@@ -1153,12 +783,16 @@ function App() {
                 id="projectionDays"
                 value={projectionDays} 
                 onChange={(e) => setProjectionDays(parseInt(e.target.value))}
+                aria-describedby="projection-days-desc"
               >
                 <option value={15}>Next 15 Days</option>
                 <option value={30}>Next 30 Days</option>
                 <option value={60}>Next 60 Days</option>
                 <option value={90}>Next 90 Days</option>
               </select>
+              <div id="projection-days-desc" className="sr-only">
+                Select how many days to project into the future
+              </div>
             </div>
             <div className="control-group">
               <label className="checkbox-label">
@@ -1166,9 +800,13 @@ function App() {
                   type="checkbox" 
                   checked={showTransactionDaysOnly}
                   onChange={(e) => setShowTransactionDaysOnly(e.target.checked)}
+                  aria-describedby="transaction-days-desc"
                 />
                 Show Only Transaction Days
               </label>
+              <div id="transaction-days-desc" className="sr-only">
+                Filter to show only days with income or expenses
+              </div>
             </div>
             <div className="control-group">
               <label htmlFor="chartType">Chart Type:</label>
@@ -1176,91 +814,108 @@ function App() {
                 id="chartType"
                 value={chartType} 
                 onChange={(e) => setChartType(e.target.value)}
+                aria-describedby="chart-type-desc"
               >
                 <option value="line">Line Chart</option>
                 <option value="bar">Bar Chart</option>
               </select>
+              <div id="chart-type-desc" className="sr-only">
+                Choose between line or bar chart visualization
+              </div>
             </div>
           </div>
           
           {/* Cashflow Graph */}
           <div className="cashflow-graph mb-lg">
-            <h3>Balance Trend</h3>
-            <div className="chart-container">
-              <ResponsiveContainer width="100%" height={300}>
-                {chartType === 'line' ? (
-                  <LineChart data={getChartData()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
-                    <XAxis 
-                      dataKey="shortDate" 
-                      tick={{ fontSize: 12 }}
-                      interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => `$${value.toLocaleString()}`}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
-                    <Line 
-                      type="monotone" 
-                      dataKey="balance" 
-                      stroke="#2A623C" 
-                      strokeWidth={2}
-                      dot={{ fill: '#2A623C', strokeWidth: 1, r: 3 }}
-                      activeDot={{ r: 5, fill: '#2A623C' }}
-                    />
-                  </LineChart>
-                ) : (
-                  <BarChart data={getChartData()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
-                    <XAxis 
-                      dataKey="shortDate" 
-                      tick={{ fontSize: 12 }}
-                      interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => `$${value.toLocaleString()}`}
-                      domain={['dataMin', 'dataMax']}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <ReferenceLine y={0} stroke="#374151" strokeWidth={2} />
-                    <Bar 
-                      dataKey="income" 
-                      fill="#2A623C"
-                      opacity={0.8}
-                      name="Income"
-                    />
-                    <Bar 
-                      dataKey="expenses" 
-                      fill="#DC2626"
-                      opacity={0.8}
-                      name="Expenses"
-                    />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
+            <h3 id="balance-trend-heading">Balance Trend</h3>
+            <div className="chart-container" role="img" aria-labelledby="balance-trend-heading" aria-describedby="balance-trend-desc">
+              <div id="balance-trend-desc" className="sr-only">
+                Interactive chart showing projected account balance over time with income and expenses
+              </div>
+              <ChartErrorBoundary>
+                <ResponsiveContainer width="100%" height={300}>
+                  {chartType === 'line' ? (
+                    <LineChart data={getChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                      <XAxis 
+                        dataKey="shortDate" 
+                        tick={{ fontSize: 12 }}
+                        interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={formatChartCurrency}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
+                      <Line 
+                        type="monotone" 
+                        dataKey="balance" 
+                        stroke="#2A623C" 
+                        strokeWidth={2}
+                        dot={{ fill: '#2A623C', strokeWidth: 1, r: 3 }}
+                        activeDot={{ r: 5, fill: '#2A623C' }}
+                      />
+                    </LineChart>
+                  ) : (
+                    <BarChart data={getChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                      <XAxis 
+                        dataKey="shortDate" 
+                        tick={{ fontSize: 12 }}
+                        interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={formatChartCurrency}
+                        domain={['dataMin', 'dataMax']}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <ReferenceLine y={0} stroke="#374151" strokeWidth={2} />
+                      <Bar 
+                        dataKey="income" 
+                        fill="#2A623C"
+                        opacity={0.8}
+                        name="Income"
+                      />
+                      <Bar 
+                        dataKey="expenses" 
+                        fill="#DC2626"
+                        opacity={0.8}
+                        name="Expenses"
+                      />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </ChartErrorBoundary>
             </div>
           </div>
           
           {/* Full Cashflow Table */}
           <div className="cashflow-table-section">
-            <h3>Daily Breakdown</h3>
-            <div className="cashflow-table">
-              {getFilteredCashflowData().map((day, index) => (
-                <div key={index} className="cashflow-row">
+            <h3 id="daily-breakdown-heading">Daily Breakdown</h3>
+            <div 
+              className="cashflow-table" 
+              role="table" 
+              aria-labelledby="daily-breakdown-heading"
+              aria-describedby="daily-breakdown-desc"
+            >
+              <div id="daily-breakdown-desc" className="sr-only">
+                Table showing daily income, expenses, and running balance for each day in the projection period
+              </div>
+              {getFilteredCashflowData.map((day, index) => (
+                <div key={index} className="cashflow-row" role="row">
                   <div className="cashflow-data">
-                    <div className="date-col">
+                    <div className="date-col" role="cell" aria-label={`Date: ${day.date.toLocaleDateString()}`}>
                       {day.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
                     </div>
-                    <div className="income-col">
+                    <div className="income-col" role="cell" aria-label={`Income: $${day.income.toFixed(2)}`}>
                       Income: ${day.income.toFixed(2)}
                     </div>
-                    <div className="expense-col">
+                    <div className="expense-col" role="cell" aria-label={`Expenses: $${day.expenses.toFixed(2)}`}>
                       Expenses: ${day.expenses.toFixed(2)}
                     </div>
-                    <div className="balance-col">
+                    <div className="balance-col" role="cell" aria-label={`Running balance: ${day.runningBalance < 0 ? 'negative ' : ''}$${Math.abs(day.runningBalance).toFixed(2)}`}>
                       Balance: <span className={day.runningBalance < 0 ? 'negative' : ''}>
                         ${Math.abs(day.runningBalance).toFixed(2)}
                       </span>
@@ -1275,11 +930,11 @@ function App() {
       )}
       
       {activeTab === 'projection' && (
-        <div className="projection-layout">
+        <div role="tabpanel" id="panel-projection" aria-labelledby="tab-projection" className="projection-layout">
           <div className="projection-panel">
             <div className="projection-header">
               <h2>Cashflow Projection</h2>
-              <button className="download" onClick={exportToCSV}>Export Cashflow CSV</button>
+              <button className="download" onClick={exportToCSV} aria-label="Export cashflow projection data as CSV file">Export Cashflow CSV</button>
             </div>
             
             {/* Balance Summary */}
@@ -1290,7 +945,7 @@ function App() {
               </div>
               <div className="metric-card">
                 {(() => {
-                  const estimated = getEstimatedBalance()
+                  const estimated = getEstimatedBalance
                   const month = estimated.date.getMonth() + 1
                   const day = estimated.date.getDate()
                   const shortDate = `${month}/${day}`
@@ -1340,60 +995,62 @@ function App() {
             <div className="cashflow-graph mb-lg">
               <h3>Balance Trend</h3>
               <div className="chart-container">
-                <ResponsiveContainer width="100%" height={300}>
-                  {chartType === 'line' ? (
-                    <LineChart data={getChartData()}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
-                      <XAxis 
-                        dataKey="shortDate" 
-                        tick={{ fontSize: 12 }}
-                        interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => `$${value.toLocaleString()}`}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
-                      <Line 
-                        type="monotone" 
-                        dataKey="balance" 
-                        stroke="#2A623C" 
-                        strokeWidth={2}
-                        dot={{ fill: '#2A623C', strokeWidth: 1, r: 3 }}
-                        activeDot={{ r: 5, fill: '#2A623C' }}
-                      />
-                    </LineChart>
-                  ) : (
-                    <BarChart data={getChartData()}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
-                      <XAxis 
-                        dataKey="shortDate" 
-                        tick={{ fontSize: 12 }}
-                        interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => `$${value.toLocaleString()}`}
-                        domain={['dataMin', 'dataMax']}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <ReferenceLine y={0} stroke="#374151" strokeWidth={2} />
-                      <Bar 
-                        dataKey="income" 
-                        fill="#2A623C"
-                        opacity={0.8}
-                        name="Income"
-                      />
-                      <Bar 
-                        dataKey="expenses" 
-                        fill="#DC2626"
-                        opacity={0.8}
-                        name="Expenses"
-                      />
-                    </BarChart>
-                  )}
-                </ResponsiveContainer>
+                <ChartErrorBoundary>
+                  <ResponsiveContainer width="100%" height={300}>
+                    {chartType === 'line' ? (
+                      <LineChart data={getChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                        <XAxis 
+                          dataKey="shortDate" 
+                          tick={{ fontSize: 12 }}
+                          interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={formatChartCurrency}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <ReferenceLine y={0} stroke="#DC2626" strokeDasharray="2 2" />
+                        <Line 
+                          type="monotone" 
+                          dataKey="balance" 
+                          stroke="#2A623C" 
+                          strokeWidth={2}
+                          dot={{ fill: '#2A623C', strokeWidth: 1, r: 3 }}
+                          activeDot={{ r: 5, fill: '#2A623C' }}
+                        />
+                      </LineChart>
+                    ) : (
+                      <BarChart data={getChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+                        <XAxis 
+                          dataKey="shortDate" 
+                          tick={{ fontSize: 12 }}
+                          interval={projectionDays <= 30 ? 1 : projectionDays <= 60 ? 6 : 6}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={formatChartCurrency}
+                          domain={['dataMin', 'dataMax']}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <ReferenceLine y={0} stroke="#374151" strokeWidth={2} />
+                        <Bar 
+                          dataKey="income" 
+                          fill="#2A623C"
+                          opacity={0.8}
+                          name="Income"
+                        />
+                        <Bar 
+                          dataKey="expenses" 
+                          fill="#DC2626"
+                          opacity={0.8}
+                          name="Expenses"
+                        />
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                </ChartErrorBoundary>
               </div>
             </div>
             
@@ -1401,7 +1058,7 @@ function App() {
             <div className="cashflow-table-section">
               <h3>Daily Breakdown</h3>
               <div className="cashflow-table">
-                {getFilteredCashflowData().map((day, index) => (
+                {getFilteredCashflowData.map((day, index) => (
                   <div key={index} className="cashflow-row">
                     <div className="cashflow-data">
                       <div className="date-col">
@@ -1428,11 +1085,11 @@ function App() {
       )}
       
       {activeTab === 'insights' && (
-        <div className="insights-layout">
+        <div role="tabpanel" id="panel-insights" aria-labelledby="tab-insights" className="insights-layout">
           {/* Summary Metrics */}
           <div className="summary-metrics">
             {(() => {
-              const data = getFlowBreakdownData()
+              const data = getFlowBreakdown
               const netCashFlow = data.totalIncome - data.totalExpenses
               
               return (
@@ -1468,7 +1125,7 @@ function App() {
               <div className="sankey-chart">
                 {(() => {
                   try {
-                    const sankeyData = getSankeyData()
+                    const sankeyData = getSankeyDiagramData
                     console.log('Sankey data:', sankeyData) // Debug log
                     
                     // Show message if no data
@@ -1484,23 +1141,25 @@ function App() {
                     }
                     
                     return (
-                      <ResponsiveSankey
-                        data={sankeyData}
-                        margin={{ top: 40, right: 160, bottom: 40, left: 50 }}
-                        align="justify"
-                        colors={{ scheme: 'set2' }}
-                        nodeOpacity={1}
-                        nodeHoverOthersOpacity={0.35}
-                        nodeThickness={18}
-                        nodeSpacing={24}
-                        nodeBorderWidth={0}
-                        linkOpacity={0.5}
-                        linkHoverOthersOpacity={0.1}
-                        enableLinkGradient={true}
-                        labelPosition="outside"
-                        labelOrientation="vertical"
-                        labelTextColor={{ from: 'color', modifiers: [['darker', 1]] }}
-                      />
+                      <ChartErrorBoundary>
+                        <ResponsiveSankey
+                          data={sankeyData}
+                          margin={{ top: 40, right: 160, bottom: 40, left: 50 }}
+                          align="justify"
+                          colors={{ scheme: 'set2' }}
+                          nodeOpacity={1}
+                          nodeHoverOthersOpacity={0.35}
+                          nodeThickness={18}
+                          nodeSpacing={24}
+                          nodeBorderWidth={0}
+                          linkOpacity={0.5}
+                          linkHoverOthersOpacity={0.1}
+                          enableLinkGradient={true}
+                          labelPosition="outside"
+                          labelOrientation="vertical"
+                          labelTextColor={{ from: 'color', modifiers: [['darker', 1]] }}
+                        />
+                      </ChartErrorBoundary>
                     )
                   } catch (error) {
                     console.error('Sankey render error:', error)
@@ -1526,7 +1185,7 @@ function App() {
               
               <div className="flow-breakdown">
             {(() => {
-              const data = getFlowBreakdownData()
+              const data = getFlowBreakdown
               return (
                 <>
                   <div className="flow-column">
@@ -1579,27 +1238,9 @@ function App() {
           It's about the next {projectionDays} days, judgement free cashflow
         </div>
         <div className="tagline-main">
-          {TAGLINES[currentTaglineIndex]}
+          {taglines[currentTaglineIndex]}
         </div>
       </div>
-
-      {/* Help Modal */}
-      {showHelpModal && (
-        <div className="modal-overlay" onClick={() => setShowHelpModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Data Storage & Privacy</h3>
-              <button className="modal-close" aria-label="Close" onClick={() => setShowHelpModal(false)}>
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <p>Your inputs are stored locally in your browser using localStorage. No servers, no banks, no third parties.</p>
-              <p>You can export and import your data via CSV from the Inputs tab. Clearing your browser storage will remove saved data.</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

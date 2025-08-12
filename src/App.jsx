@@ -5,11 +5,12 @@ import './App.css'
 import { calculateCashflow } from './lib/cashflow.js'
 import { getFlowBreakdownData, getSankeyData } from './lib/analysis.js'
 import { exportProjectionCSV, exportInputsCSV, importInputsCSV } from './lib/csv.js'
-import { loadState, debouncedSaveState } from './lib/storage.js'
 import { formatShortDate, formatChartCurrency, formatNegativeCurrency } from './lib/format.js'
+import { loadUserState, debouncedSaveUserState, saveUserState } from './lib/supabaseStorage.js'
 import ChartErrorBoundary from './components/ChartErrorBoundary.jsx'
+import SupabaseAuthGuard from './components/SupabaseAuthGuard.jsx'
 
-function App() {
+function CashflowApp({ user, isGuest }) {
   const [startingBalance, setStartingBalance] = useState(0)
   const [incomes, setIncomes] = useState([])
   const [creditCards, setCreditCards] = useState([])
@@ -21,6 +22,7 @@ function App() {
   const [chartType, setChartType] = useState('line')
   const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0)
   const [showHelpModal, setShowHelpModal] = useState(false)
+  const [saveStatus, setSaveStatus] = useState({ message: '', isSuccess: false, isLoading: false })
 
   // Handle keyboard navigation for tabs
   const handleTabKeyDown = (event, tabName) => {
@@ -49,25 +51,78 @@ function App() {
     }
   }
 
-  // Load data from localStorage on component mount
-  useEffect(() => {
-    const savedData = loadState()
-    if (savedData) {
-      setStartingBalance(savedData.startingBalance || 0)
-      setIncomes(savedData.incomes || [])
-      setCreditCards(savedData.creditCards || [])
-      setRecurringExpenses(savedData.recurringExpenses || [])
-      setOneTimeExpenses(savedData.oneTimeExpenses || [])
-      setProjectionDays(savedData.projectionDays || 30)
-      setShowTransactionDaysOnly(savedData.showTransactionDaysOnly || false)
-      setActiveTab(savedData.activeTab || 'inputs')
-      setChartType(savedData.chartType || 'line')
+  // Manual save function
+  const handleManualSave = async () => {
+    const userId = user ? user.userId : null
+    const userEmail = user ? user.email : null
+    
+    setSaveStatus({ message: 'Saving...', isSuccess: false, isLoading: true })
+    
+    const currentState = {
+      startingBalance,
+      incomes,
+      creditCards,
+      recurringExpenses,
+      oneTimeExpenses,
+      projectionDays,
+      showTransactionDaysOnly,
+      activeTab,
+      chartType
     }
-  }, [])
+    
+    try {
+      const result = await saveUserState(userId, userEmail, currentState)
+      setSaveStatus({ 
+        message: result.message, 
+        isSuccess: result.success, 
+        isLoading: false 
+      })
+      
+      // Clear message after 3 seconds
+      setTimeout(() => {
+        setSaveStatus({ message: '', isSuccess: false, isLoading: false })
+      }, 3000)
+    } catch (error) {
+      setSaveStatus({ 
+        message: 'Save failed: Network error', 
+        isSuccess: false, 
+        isLoading: false 
+      })
+      
+      setTimeout(() => {
+        setSaveStatus({ message: '', isSuccess: false, isLoading: false })
+      }, 3000)
+    }
+  }
 
-  // Save data to localStorage whenever state changes (debounced)
+  // Load user-specific data on component mount
   useEffect(() => {
-    debouncedSaveState({
+    const loadData = async () => {
+      const userId = user ? user.userId : null
+      const userEmail = user ? user.email : null
+      const savedData = await loadUserState(userId, userEmail)
+      
+      if (savedData) {
+        setStartingBalance(savedData.startingBalance || 0)
+        setIncomes(savedData.incomes || [])
+        setCreditCards(savedData.creditCards || [])
+        setRecurringExpenses(savedData.recurringExpenses || [])
+        setOneTimeExpenses(savedData.oneTimeExpenses || [])
+        setProjectionDays(savedData.projectionDays || 30)
+        setShowTransactionDaysOnly(savedData.showTransactionDaysOnly || false)
+        setActiveTab(savedData.activeTab || 'inputs')
+        setChartType(savedData.chartType || 'line')
+      }
+    }
+    
+    loadData()
+  }, [user])
+
+  // Save user-specific data whenever state changes (debounced)
+  useEffect(() => {
+    const userId = user ? user.userId : null
+    const userEmail = user ? user.email : null
+    debouncedSaveUserState(userId, userEmail, {
       startingBalance,
       incomes,
       creditCards,
@@ -78,7 +133,7 @@ function App() {
       activeTab,
       chartType
     })
-  }, [startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays, showTransactionDaysOnly, activeTab, chartType])
+  }, [user, startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays, showTransactionDaysOnly, activeTab, chartType])
 
   const addIncome = () => {
     setIncomes([...incomes, {
@@ -375,8 +430,9 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Tab Navigation */}
-      <div className="tab-navigation" role="tablist" aria-label="Cashflow management sections">
+      {/* Tab Navigation with Save Button */}
+      <div className="tab-navigation-wrapper">
+        <div className="tab-navigation" role="tablist" aria-label="Cashflow management sections">
         <button 
           role="tab"
           id="tab-inputs"
@@ -425,6 +481,23 @@ function App() {
         >
           Export to PDF
         </button>
+        </div>
+        
+        {/* Manual Save Button */}
+        <div className="save-section">
+          <button 
+            className={`save-button ${saveStatus.isLoading ? 'loading' : ''} ${saveStatus.isSuccess ? 'success' : ''}`}
+            onClick={handleManualSave}
+            disabled={saveStatus.isLoading}
+          >
+            {saveStatus.isLoading ? '💾 Saving...' : '💾 Save'}
+          </button>
+          {saveStatus.message && (
+            <div className={`save-status ${saveStatus.isSuccess ? 'success' : 'error'}`}>
+              {saveStatus.message}
+            </div>
+          )}
+        </div>
       </div>
       
       {activeTab === 'inputs' && (
@@ -1242,6 +1315,17 @@ function App() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Main App component with authentication
+function App() {
+  return (
+    <SupabaseAuthGuard>
+      {({ user, isGuest }) => (
+        <CashflowApp user={user} isGuest={isGuest} />
+      )}
+    </SupabaseAuthGuard>
   )
 }
 

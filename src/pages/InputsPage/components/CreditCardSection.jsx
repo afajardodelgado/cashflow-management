@@ -1,0 +1,86 @@
+import { useFinancialContext } from '../../../context/FinancialContext'
+
+const CreditCardSection = () => {
+  const { creditCards, addCreditCard, updateCreditCard, deleteCreditCard } = useFinancialContext()
+
+  const handleUpdateCreditCard = (id, field, value) => {
+    updateCreditCard(id, { [field]: value })
+  }
+
+  return (
+    <div className="card">
+      <h3>Credit Cards</h3>
+      <p>Track credit card balances and due dates</p>
+      
+      {creditCards.map(card => (
+        <div key={card.id} className="income-item mb-md">
+          <div className="flex gap-md mb-sm">
+            <div className="input-group">
+              <label>Card Name:</label>
+              <input 
+                type="text" 
+                placeholder="e.g., Chase Sapphire"
+                value={card.name}
+                onChange={(e) => handleUpdateCreditCard(card.id, 'name', e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <label>Balance:</label>
+              <input 
+                type="number" 
+                placeholder="0.00"
+                value={card.balance || ''}
+                onChange={(e) => handleUpdateCreditCard(card.id, 'balance', parseFloat(e.target.value) || 0)}
+              />
+            </div>
+          </div>
+          <div className="flex gap-md mb-sm">
+            <div className="date-field">
+              <label>Due Date:</label>
+              <input 
+                type="date" 
+                value={card.dueDate}
+                onChange={(e) => handleUpdateCreditCard(card.id, 'dueDate', e.target.value)}
+              />
+            </div>
+            <div className="date-field">
+              <label>Pay Date:</label>
+              <input 
+                type="date" 
+                value={card.payDate}
+                onChange={(e) => handleUpdateCreditCard(card.id, 'payDate', e.target.value)}
+                placeholder="Optional - uses due date if empty"
+              />
+            </div>
+            <button 
+              className="remove-btn" 
+              onClick={() => deleteCreditCard(card.id)}
+            >
+              Remove
+            </button>
+          </div>
+          {card.dueDate && card.payDate && new Date(card.payDate) > new Date(card.dueDate) && (
+            <div className="alert-danger">
+              Warning: Pay date is after due date - this may incur late fees!
+            </div>
+          )}
+        </div>
+      ))}
+      
+      <button 
+        className="add-button" 
+        onClick={() => addCreditCard({
+          name: '',
+          balance: 0,
+          dueDate: new Date().toISOString().split('T')[0],
+          payDate: ''
+        })} 
+        aria-label="Add new credit card"
+      >
+        + Add Credit Card
+      </button>
+    </div>
+  )
+}
+
+export default CreditCardSection

@@ -9,7 +9,11 @@
       "Bash(rm:*)",
       "Bash(brew install:*)",
       "Bash(supabase:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

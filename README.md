@@ -72,6 +72,15 @@ npm run build
 
 # Preview production build
 npm run preview
+
+# Run all tests
+npm test
+
+# Run specific test suites
+npm run test:math        # Math calculation tests
+npm run test:save        # Save functionality tests
+npm run test:supabase    # Supabase configuration tests
+npm run test:upsert      # Upsert functionality tests
 ```
 
 ### Development Server

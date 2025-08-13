@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node tests/run-all-tests.js",
+    "test:math": "node tests/test-math-calculations.js",
+    "test:save": "node tests/test-save-functionality.js",
+    "test:supabase": "node tests/test-supabase-config.js",
+    "test:upsert": "node tests/test-upsert-functionality.js"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

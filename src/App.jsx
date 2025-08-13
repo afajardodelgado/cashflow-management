@@ -490,7 +490,7 @@ function CashflowApp({ user, isGuest }) {
             onClick={handleManualSave}
             disabled={saveStatus.isLoading}
           >
-            {saveStatus.isLoading ? '💾 Saving...' : '💾 Save'}
+            {saveStatus.isLoading ? 'Saving...' : 'Save'}
           </button>
           {saveStatus.message && (
             <div className={`save-status ${saveStatus.isSuccess ? 'success' : 'error'}`}>
@@ -693,7 +693,7 @@ function CashflowApp({ user, isGuest }) {
                 {/* Red alert if pay date is after due date */}
                 {card.dueDate && card.payDate && new Date(card.payDate) > new Date(card.dueDate) && (
                   <div className="alert-danger">
-                    ⚠️ Pay date is after due date - this may incur late fees!
+                    Warning: Pay date is after due date - this may incur late fees!
                   </div>
                 )}
               </div>

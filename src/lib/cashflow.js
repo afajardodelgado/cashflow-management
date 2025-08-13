@@ -82,6 +82,8 @@ export const calculateCashflow = (startingBalance, incomes, creditCards, recurri
   for (let i = 0; i < days; i++) {
     const currentDate = new Date(today)
     currentDate.setDate(today.getDate() + i)
+    // Normalize to midnight for consistent date comparison
+    currentDate.setHours(0, 0, 0, 0)
     
     let dailyIncome = 0
     let dailyExpenses = 0

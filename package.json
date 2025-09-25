@@ -8,6 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "prestart": "npm run build",
+    "start": "node scripts/serve.js",
     "test": "node tests/run-all-tests.js",
     "test:math": "node tests/test-math-calculations.js",
     "test:save": "node tests/test-save-functionality.js",

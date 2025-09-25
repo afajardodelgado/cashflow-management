@@ -51,7 +51,14 @@ async function main() {
   try {
     // Get all test files
     const files = await fs.readdir(__dirname)
-    const testFiles = files.filter(f => f.startsWith('test-') && f.endsWith('.js'))
+    let testFiles = files.filter(f => f.startsWith('test-') && f.endsWith('.js'))
+
+    const hasSupabaseEnv = Boolean(process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY)
+    if (!hasSupabaseEnv) {
+      const skipped = ['test-supabase-config.js', 'test-upsert-functionality.js']
+      testFiles = testFiles.filter(f => !skipped.includes(f))
+      console.log(`${colors.yellow}Supabase env not found. Skipping: ${skipped.join(', ')}${colors.reset}`)
+    }
     
     if (testFiles.length === 0) {
       console.log(`${colors.yellow}No test files found${colors.reset}`)

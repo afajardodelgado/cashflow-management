@@ -13,13 +13,21 @@ const SettingsSection = () => {
     recurringExpenses,
     setRecurringExpenses,
     oneTimeExpenses,
-    setOneTimeExpenses
+    setOneTimeExpenses,
+    projectionDays
   } = useFinancialContext()
   
   const [showHelpModal, setShowHelpModal] = useState(false)
 
   const exportInputData = () => {
-    exportInputsCSV(incomes, creditCards, recurringExpenses, oneTimeExpenses, startingBalance)
+    exportInputsCSV({
+      startingBalance,
+      incomes,
+      creditCards,
+      recurringExpenses,
+      oneTimeExpenses,
+      projectionDays
+    })
   }
 
   const importInputData = async (event) => {

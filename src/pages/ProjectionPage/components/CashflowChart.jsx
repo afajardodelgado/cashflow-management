@@ -1,43 +1,16 @@
-import { useMemo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import ChartErrorBoundary from '../../../components/ChartErrorBoundary'
 import { useFinancialContext } from '../../../context/FinancialContext'
-import { calculateCashflow } from '../../../services/calculations/cashflow'
-import { formatShortDate, formatChartCurrency } from '../../../lib/format'
+import { useCashflowCalculations } from '../../../hooks/useCashflowCalculations'
+import { formatChartCurrency } from '../../../lib/format'
 
 const CashflowChart = () => {
   const { 
-    startingBalance, 
-    incomes, 
-    creditCards, 
-    recurringExpenses, 
-    oneTimeExpenses, 
     projectionDays,
-    showTransactionDaysOnly,
     chartType
   } = useFinancialContext()
 
-  const getCashflowData = useMemo(() => {
-    return calculateCashflow(startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays)
-  }, [startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays])
-
-  const getChartData = useMemo(() => {
-    let filteredData = getCashflowData
-    
-    if (showTransactionDaysOnly) {
-      filteredData = getCashflowData.filter(day => day.income > 0 || day.expenses > 0)
-    }
-    
-    return filteredData.map((day, index) => ({
-      day: index + 1,
-      date: day.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }),
-      shortDate: formatShortDate(day.date),
-      balance: day.runningBalance,
-      income: day.income,
-      expenses: -day.expenses,
-      netChange: day.netChange
-    }))
-  }, [getCashflowData, showTransactionDaysOnly])
+  const { chartData: getChartData } = useCashflowCalculations()
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {

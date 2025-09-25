@@ -113,12 +113,22 @@ const parseCsvLine = (line) => {
   return result
 }
 
-export const importInputsCSV = (csvContent) => {
-  const lines = csvContent.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'))
+export const importInputsCSV = async (input) => {
+  let csvText = ''
+  if (typeof input === 'string') {
+    csvText = input
+  } else if (input && typeof input.text === 'function') {
+    // File or Blob
+    csvText = await input.text()
+  } else {
+    return null
+  }
+
+  const lines = csvText.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'))
   
   let currentSection = null
   let newStartingBalance = 0
-  let newProjectionDays = 30
+  let newProjectionDays = 90
   let newIncomes = []
   let newCreditCards = []
   let newRecurringExpenses = []

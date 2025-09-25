@@ -5,7 +5,8 @@
  * Note: This requires Supabase to be configured and running
  */
 
-import { saveUserState, loadUserState } from './src/lib/supabaseStorage.js'
+import './polyfill-localstorage.js'
+import { saveUserState, loadUserState } from '../src/lib/supabaseStorage.js'
 
 // Test data structure
 const testData = {

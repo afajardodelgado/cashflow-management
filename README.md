@@ -180,6 +180,42 @@ The application uses a tabbed interface:
 - **Enhanced Breakdown Views**: Improved categorization and percentage displays
 - **Responsive Design**: Mobile-optimized layouts for all new features
 
+## Deployment on Railway
+
+This project is configured to deploy easily on [Railway](https://railway.app/).
+
+### Build & Start Commands
+- Build: `npm run build` (Vite production build)
+- Start: `npm start` (serves the built `dist/` directory using a minimal Node server that binds to `PORT`)
+
+A custom server script at `scripts/serve.js` serves static files from `dist/` and provides SPA fallback to `index.html`. The server binds to `0.0.0.0:${PORT}` where `PORT` is provided by Railway.
+
+### Environment Variables (Optional)
+Supabase is optional. The app runs fully in guest mode without these variables. If you want cloud persistence via Supabase:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+An example file `env.example` is included with placeholders. On Railway, configure these in the Variables panel (no `.env` file is needed in the repo).
+
+### Railway Deployment Steps
+1. Push your code to GitHub.
+2. In Railway, create a New Project → Deploy from GitHub, and select this repository.
+3. In Settings → Variables, optionally add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` if using Supabase. Otherwise, skip for guest mode.
+4. Railway will automatically run `npm run build` (via `prestart`) and then `npm start`.
+5. Open the generated Railway URL. Client-side routes work thanks to the SPA fallback.
+
+### Local Production Preview
+You can simulate the Railway environment locally:
+```bash
+npm run build
+PORT=8080 npm start
+# Visit http://localhost:8080
+```
+
+### Tests and Supabase
+- Test runner (`tests/run-all-tests.js`) automatically skips Supabase integration tests when `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` are not set.
+- Local storage tests use a Node polyfill and do not require Supabase.
+
 ## Future Enhancements
 - Multiple currency support
 - Bank account integration

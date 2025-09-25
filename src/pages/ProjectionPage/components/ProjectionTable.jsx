@@ -1,28 +1,8 @@
-import { useMemo } from 'react'
-import { useFinancialContext } from '../../../context/FinancialContext'
-import { calculateCashflow } from '../../../services/calculations/cashflow'
+import { useCashflowCalculations } from '../../../hooks/useCashflowCalculations'
+import { formatNegativeCurrency } from '../../../lib/format'
 
 const ProjectionTable = () => {
-  const { 
-    startingBalance, 
-    incomes, 
-    creditCards, 
-    recurringExpenses, 
-    oneTimeExpenses, 
-    projectionDays,
-    showTransactionDaysOnly
-  } = useFinancialContext()
-
-  const getCashflowData = useMemo(() => {
-    return calculateCashflow(startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays)
-  }, [startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays])
-
-  const getFilteredCashflowData = useMemo(() => {
-    if (showTransactionDaysOnly) {
-      return getCashflowData.filter(day => day.income > 0 || day.expenses > 0)
-    }
-    return getCashflowData
-  }, [getCashflowData, showTransactionDaysOnly])
+  const { filteredCashflowData: getFilteredCashflowData } = useCashflowCalculations()
 
   return (
     <div className="cashflow-table-section">
@@ -42,7 +22,7 @@ const ProjectionTable = () => {
               </div>
               <div className="balance-col">
                 Balance: <span className={day.runningBalance < 0 ? 'negative' : ''}>
-                  ${Math.abs(day.runningBalance).toFixed(2)}
+                  {formatNegativeCurrency(day.runningBalance)}
                 </span>
               </div>
             </div>

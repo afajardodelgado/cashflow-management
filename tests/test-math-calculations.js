@@ -5,8 +5,8 @@
  * Run with: node test-math-calculations.js
  */
 
-import { calculateCashflow, isPaymentDue, getLastBusinessDay } from './src/lib/cashflow.js'
-import { normalizeDate, getEpochDay, formatShortDate } from './src/lib/format.js'
+import { calculateCashflow, isPaymentDue, getLastBusinessDay } from '../src/lib/cashflow.js'
+import { normalizeDate, getEpochDay, formatShortDate } from '../src/lib/format.js'
 
 // Simple test runner
 class TestRunner {
@@ -189,7 +189,11 @@ test.test('calculateCashflow - simple income and expense calculation', () => {
     name: 'Salary',
     amount: 500,
     frequency: 'weekly',
-    nextPayDate: '2024-01-01'
+    nextPayDate: (() => {
+      const d = new Date()
+      const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      return s
+    })()
   }]
   const creditCards = []
   const recurringExpenses = [{
@@ -197,7 +201,11 @@ test.test('calculateCashflow - simple income and expense calculation', () => {
     name: 'Rent',
     amount: 200,
     frequency: 'weekly',
-    nextDueDate: '2024-01-01'
+    nextDueDate: (() => {
+      const d = new Date()
+      const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      return s
+    })()
   }]
   const oneTimeExpenses = []
   
@@ -224,8 +232,8 @@ test.test('calculateCashflow - simple income and expense calculation', () => {
 test.test('calculateCashflow - multiple income sources same day', () => {
   const startingBalance = 1000
   const incomes = [
-    { id: '1', name: 'Salary', amount: 500, frequency: 'weekly', nextPayDate: '2024-01-01' },
-    { id: '2', name: 'Freelance', amount: 200, frequency: 'weekly', nextPayDate: '2024-01-01' }
+    { id: '1', name: 'Salary', amount: 500, frequency: 'weekly', nextPayDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })() },
+    { id: '2', name: 'Freelance', amount: 200, frequency: 'weekly', nextPayDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })() }
   ]
   const creditCards = []
   const recurringExpenses = []
@@ -315,7 +323,7 @@ test.test('calculateCashflow - handles negative balance correctly', () => {
     name: 'Rent',
     amount: 500,
     frequency: 'weekly',
-    nextDueDate: '2024-01-01'
+    nextDueDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
   }]
   const oneTimeExpenses = []
   

@@ -1,17 +1,12 @@
-import { useMemo } from 'react'
 import { useFinancialContext } from '../../context/FinancialContext'
 import CashflowChart from './components/CashflowChart'
 import ProjectionTable from './components/ProjectionTable'
-import { calculateCashflow } from '../../services/calculations/cashflow'
+import { useCashflowCalculations } from '../../hooks/useCashflowCalculations'
 import { exportProjectionCSV } from '../../services/export/csv'
 
 const ProjectionPage = () => {
   const {
     startingBalance,
-    incomes,
-    creditCards,
-    recurringExpenses,
-    oneTimeExpenses,
     projectionDays,
     setProjectionDays,
     showTransactionDaysOnly,
@@ -20,34 +15,10 @@ const ProjectionPage = () => {
     setChartType
   } = useFinancialContext()
 
-  const getCashflowData = useMemo(() => {
-    return calculateCashflow(startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays)
-  }, [startingBalance, incomes, creditCards, recurringExpenses, oneTimeExpenses, projectionDays])
-
-  const getFilteredCashflowData = useMemo(() => {
-    if (showTransactionDaysOnly) {
-      return getCashflowData.filter(day => day.income > 0 || day.expenses > 0)
-    }
-    return getCashflowData
-  }, [getCashflowData, showTransactionDaysOnly])
-
-  const getEstimatedBalance = useMemo(() => {
-    if (getCashflowData.length === 0) {
-      return {
-        balance: startingBalance,
-        date: new Date()
-      }
-    }
-    
-    const finalDay = getCashflowData[getCashflowData.length - 1]
-    return {
-      balance: finalDay.runningBalance,
-      date: finalDay.date
-    }
-  }, [getCashflowData, startingBalance])
+  const { filteredCashflowData, estimatedBalance } = useCashflowCalculations()
 
   const exportToCSV = () => {
-    exportProjectionCSV(getFilteredCashflowData)
+    exportProjectionCSV(filteredCashflowData)
   }
 
   return (
@@ -64,7 +35,7 @@ const ProjectionPage = () => {
         </div>
         <div className="metric-card">
           {(() => {
-            const estimated = getEstimatedBalance
+            const estimated = estimatedBalance
             const month = estimated.date.getMonth() + 1
             const day = estimated.date.getDate()
             const shortDate = `${month}/${day}`

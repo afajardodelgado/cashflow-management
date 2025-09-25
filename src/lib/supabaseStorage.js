@@ -1,5 +1,5 @@
 // Supabase storage for user cashflow data - replaces localStorage
-import { supabase } from './supabase.js'
+import { supabase, isSupabaseConfigured } from './supabase.js'
 import { loadState as loadGuestState, saveState as saveGuestState } from './storage.js'
 
 // Debounced save functionality
@@ -8,7 +8,7 @@ const debouncedSaves = new Map()
 // Load user-specific state from Supabase
 export const loadUserState = async (userId, userEmail) => {
   try {
-    if (!userId) {
+    if (!userId || !isSupabaseConfigured || !supabase) {
       // Guest mode - use existing localStorage
       return loadGuestState()
     }
@@ -45,10 +45,10 @@ export const loadUserState = async (userId, userEmail) => {
 // Save user-specific state to Supabase
 export const saveUserState = async (userId, userEmail, state) => {
   try {
-    if (!userId) {
+    if (!userId || !isSupabaseConfigured || !supabase) {
       // Guest mode - use existing localStorage
       saveGuestState(state)
-      return { success: true, message: 'Saved locally (guest mode)' }
+      return { success: true, message: 'Saved locally (guest mode or no Supabase)' }
     }
 
     const dataToSave = {

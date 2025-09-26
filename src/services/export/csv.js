@@ -7,10 +7,10 @@ export const exportProjectionCSV = (cashflowData) => {
     headers.join(','),
     ...cashflowData.map(day => [
       day.date.toLocaleDateString(),
-      day.income.toFixed(2),
-      day.expenses.toFixed(2),
-      day.netChange.toFixed(2),
-      day.runningBalance.toFixed(2)
+      Math.ceil(day.income),
+      Math.ceil(day.expenses),
+      Math.ceil(day.netChange),
+      Math.ceil(day.runningBalance)
     ].join(','))
   ]
   

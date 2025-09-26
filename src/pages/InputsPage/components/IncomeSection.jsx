@@ -14,7 +14,7 @@ const IncomeSection = () => {
       
       {incomes.map(income => (
         <div key={income.id} className="income-item mb-md">
-          <div className="flex gap-md mb-sm">
+          <div className="income-grid mb-sm">
             <div className="input-group">
               <label htmlFor={`income-name-${income.id}`}>Income Name:</label>
               <input 
@@ -43,10 +43,15 @@ const IncomeSection = () => {
                 Dollar amount for this income source
               </div>
             </div>
-          </div>
-          <div className="flex gap-md mb-sm">
+            <button 
+              className="remove-btn" 
+              onClick={() => deleteIncome(income.id)}
+              aria-label={`Remove ${income.name || 'income source'}`}
+            >
+              Remove
+            </button>
             <div className="input-group">
-              <label htmlFor={`income-frequency-${income.id}`} className="sr-only">Payment Frequency</label>
+              <label htmlFor={`income-frequency-${income.id}`}>Frequency</label>
               <select 
                 id={`income-frequency-${income.id}`}
                 value={income.frequency} 
@@ -57,10 +62,11 @@ const IncomeSection = () => {
                 <option value="bi-weekly">Bi-weekly</option>
                 <option value="monthly">Monthly</option>
                 <option value="15th-and-last">15th and Last of Month</option>
+                <option value="one-time">One Time</option>
               </select>
             </div>
             <div className="input-group">
-              <label htmlFor={`income-date-${income.id}`} className="sr-only">Next Payment Date</label>
+              <label htmlFor={`income-date-${income.id}`}>Date</label>
               <input 
                 id={`income-date-${income.id}`}
                 type="date" 
@@ -69,13 +75,6 @@ const IncomeSection = () => {
                 aria-label="Next payment date"
               />
             </div>
-            <button 
-              className="remove-btn" 
-              onClick={() => deleteIncome(income.id)}
-              aria-label={`Remove ${income.name || 'income source'}`}
-            >
-              Remove
-            </button>
           </div>
         </div>
       ))}

@@ -1,5 +1,5 @@
 import { useCashflowCalculations } from '../../../hooks/useCashflowCalculations'
-import { formatNegativeCurrency } from '../../../lib/format'
+import { formatNegativeCurrency, formatCurrency } from '../../../lib/format'
 
 const ProjectionTable = () => {
   const { filteredCashflowData: getFilteredCashflowData } = useCashflowCalculations()
@@ -15,10 +15,10 @@ const ProjectionTable = () => {
                 {day.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}
               </div>
               <div className="income-col">
-                Income: ${day.income.toFixed(2)}
+                Income: {formatCurrency(day.income)}
               </div>
               <div className="expense-col">
-                Expenses: ${day.expenses.toFixed(2)}
+                Expenses: {formatCurrency(day.expenses)}
               </div>
               <div className="balance-col">
                 Balance: <span className={day.runningBalance < 0 ? 'negative' : ''}>

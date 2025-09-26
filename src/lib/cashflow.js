@@ -69,6 +69,9 @@ export const isPaymentDue = (currentDate, startDate, frequency) => {
       }
       
       return false
+    case 'one-time':
+      // Trigger only on the exact date; does not recur
+      return getEpochDay(current) === getEpochDay(start)
     default:
       return false
   }

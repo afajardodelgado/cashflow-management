@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useFinancialContext } from '../../../context/FinancialContext'
 import { getFlowBreakdownData } from '../../../services/calculations/analytics'
+import { formatCurrency, formatNegativeCurrency } from '../../../lib/format'
 
 const MetricsDashboard = () => {
   const { incomes, recurringExpenses, creditCards, oneTimeExpenses, projectionDays } = useFinancialContext()
@@ -22,12 +23,12 @@ const MetricsDashboard = () => {
     <div className="summary-metrics">
       <div className="metric-box">
         <h3>Total Income</h3>
-        <div className="metric-value positive">${metrics.totalIncome.toFixed(0)}</div>
+        <div className="metric-value positive">{formatCurrency(metrics.totalIncome)}</div>
         <div className="metric-period">Next {projectionDays} days</div>
       </div>
       <div className="metric-box">
         <h3>Total Expenses</h3>
-        <div className="metric-value negative">${metrics.totalExpenses.toFixed(0)}</div>
+        <div className="metric-value negative">{formatCurrency(metrics.totalExpenses)}</div>
         <div className="metric-period">Next {projectionDays} days</div>
       </div>
       <div className="metric-box">
@@ -40,7 +41,7 @@ const MetricsDashboard = () => {
       <div className="metric-box">
         <h3>Net Cash Flow</h3>
         <div className={`metric-value ${metrics.netCashFlow >= 0 ? 'positive' : 'negative'}`}>
-          ${Math.abs(metrics.netCashFlow).toFixed(0)}
+          {formatNegativeCurrency(metrics.netCashFlow)}
         </div>
         <div className="metric-period">{metrics.netCashFlow >= 0 ? 'Surplus' : 'Deficit'}</div>
       </div>

@@ -20,6 +20,9 @@
   --space-lg: 0.75rem;
   --space-xl: 1.2rem;
   --space-xxl: 2rem;
+
+  /* Form Controls */
+  --control-height: 36px;
   
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -135,6 +138,7 @@ input {
   font-size: 0.875rem;
   color: var(--text-black);
   font-family: inherit;
+  height: var(--control-height);
 }
 
 input:focus {
@@ -144,7 +148,7 @@ input:focus {
 
 /* Select Fields */
 select {
-  max-width: 180px;
+  max-width: 240px; /* Match input max-width for vertical alignment */
   background-color: var(--white);
   border: 1px solid #E5E5E5;
   border-radius: 6px;
@@ -153,6 +157,7 @@ select {
   color: var(--text-black);
   font-family: inherit;
   cursor: pointer;
+  height: var(--control-height);
 }
 
 select:focus {
@@ -166,6 +171,40 @@ select:focus {
   border-radius: 8px;
   padding: var(--space-md);
   background-color: #FAFAFA;
+}
+
+/* Grid layout for each income row */
+.income-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto; /* two equal input columns + remove */
+  column-gap: var(--space-md);
+  row-gap: var(--space-sm);
+  align-items: end;
+}
+
+.income-grid .remove-btn {
+  align-self: end;
+  justify-self: end;
+  height: var(--control-height);
+}
+
+.income-item > .flex {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto; /* Name/Amount or Frequency/Date + Remove */
+  gap: var(--space-md);
+  align-items: end; /* Align bottoms of inputs */
+}
+
+.income-item > .flex .remove-btn {
+  justify-self: end;
+  align-self: end;
+  height: 32px;
+}
+
+.income-item .input-group input,
+.income-item .input-group select {
+  width: 100%;
+  max-width: none;
 }
 
 /* Checkbox Styling */

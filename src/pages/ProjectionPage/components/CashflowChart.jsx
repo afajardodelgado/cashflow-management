@@ -2,7 +2,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import ChartErrorBoundary from '../../../components/ChartErrorBoundary'
 import { useFinancialContext } from '../../../context/FinancialContext'
 import { useCashflowCalculations } from '../../../hooks/useCashflowCalculations'
-import { formatChartCurrency } from '../../../lib/format'
+import { formatChartCurrency, formatCurrency, formatNegativeCurrency } from '../../../lib/format'
 
 const CashflowChart = () => {
   const { 
@@ -21,12 +21,12 @@ const CashflowChart = () => {
           <p className="tooltip-date">{`${data.shortDate}: ${data.date}`}</p>
           <p className="tooltip-balance">
             Balance: <span className={data.balance < 0 ? 'negative' : 'positive'}>
-              ${data.balance < 0 ? '(' + Math.abs(data.balance).toFixed(2) + ')' : data.balance.toFixed(2)}
+              {formatNegativeCurrency(data.balance)}
             </span>
           </p>
-          <p className="tooltip-income">Income: ${data.income.toFixed(2)}</p>
-          <p className="tooltip-expenses">Expenses: ${actualExpenses.toFixed(2)}</p>
-          <p className="tooltip-net">Net: ${data.netChange.toFixed(2)}</p>
+          <p className="tooltip-income">Income: {formatCurrency(data.income)}</p>
+          <p className="tooltip-expenses">Expenses: {formatCurrency(actualExpenses)}</p>
+          <p className="tooltip-net">Net: {formatCurrency(data.netChange)}</p>
         </div>
       )
     }

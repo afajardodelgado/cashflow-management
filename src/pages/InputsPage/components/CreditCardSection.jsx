@@ -14,10 +14,11 @@ const CreditCardSection = () => {
       
       {creditCards.map(card => (
         <div key={card.id} className="income-item mb-md">
-          <div className="flex gap-md mb-sm">
+          <div className="income-grid mb-sm">
             <div className="input-group">
-              <label>Card Name:</label>
+              <label htmlFor={`card-name-${card.id}`}>Card Name:</label>
               <input 
+                id={`card-name-${card.id}`}
                 type="text" 
                 placeholder="e.g., Chase Sapphire"
                 value={card.name}
@@ -25,31 +26,13 @@ const CreditCardSection = () => {
               />
             </div>
             <div className="input-group">
-              <label>Balance:</label>
+              <label htmlFor={`card-balance-${card.id}`}>Balance:</label>
               <input 
+                id={`card-balance-${card.id}`}
                 type="number" 
                 placeholder="0.00"
                 value={card.balance || ''}
                 onChange={(e) => handleUpdateCreditCard(card.id, 'balance', parseFloat(e.target.value) || 0)}
-              />
-            </div>
-          </div>
-          <div className="flex gap-md mb-sm">
-            <div className="date-field">
-              <label>Due Date:</label>
-              <input 
-                type="date" 
-                value={card.dueDate}
-                onChange={(e) => handleUpdateCreditCard(card.id, 'dueDate', e.target.value)}
-              />
-            </div>
-            <div className="date-field">
-              <label>Pay Date:</label>
-              <input 
-                type="date" 
-                value={card.payDate}
-                onChange={(e) => handleUpdateCreditCard(card.id, 'payDate', e.target.value)}
-                placeholder="Optional - uses due date if empty"
               />
             </div>
             <button 
@@ -58,6 +41,25 @@ const CreditCardSection = () => {
             >
               Remove
             </button>
+            <div className="input-group">
+              <label htmlFor={`card-due-${card.id}`}>Due Date:</label>
+              <input 
+                id={`card-due-${card.id}`}
+                type="date" 
+                value={card.dueDate}
+                onChange={(e) => handleUpdateCreditCard(card.id, 'dueDate', e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <label htmlFor={`card-pay-${card.id}`}>Pay Date:</label>
+              <input 
+                id={`card-pay-${card.id}`}
+                type="date" 
+                value={card.payDate}
+                onChange={(e) => handleUpdateCreditCard(card.id, 'payDate', e.target.value)}
+                placeholder="Optional - uses due date if empty"
+              />
+            </div>
           </div>
           {card.dueDate && card.payDate && new Date(card.payDate) > new Date(card.dueDate) && (
             <div className="alert-danger">

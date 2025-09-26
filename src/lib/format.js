@@ -3,12 +3,13 @@ export const formatCurrency = (amount, options = {}) => {
   const defaultOptions = {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
   }
   
   const formatter = new Intl.NumberFormat('en-US', { ...defaultOptions, ...options })
-  return formatter.format(amount)
+  // Round up to the nearest integer before formatting
+  return formatter.format(Math.ceil(amount))
 }
 
 // Date formatter using Intl.DateTimeFormat
@@ -31,15 +32,17 @@ export const formatShortDate = (date) => {
 
 // Currency formatter for charts (no currency symbol)
 export const formatChartCurrency = (value) => {
-  return `$${value.toLocaleString()}`
+  const rounded = Math.ceil(value)
+  return `$${rounded.toLocaleString()}`
 }
 
 // Format negative currency with parentheses
 export const formatNegativeCurrency = (amount) => {
-  if (amount < 0) {
-    return `($${Math.abs(amount).toFixed(2)})`
+  const rounded = Math.ceil(amount)
+  if (rounded < 0) {
+    return `($${Math.abs(rounded).toLocaleString()})`
   }
-  return `$${amount.toFixed(2)}`
+  return `$${rounded.toLocaleString()}`
 }
 
 // Normalize date to local midnight to avoid DST/timezone drift

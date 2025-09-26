@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useFinancialContext } from '../../../context/FinancialContext'
 import { getFlowBreakdownData } from '../../../services/calculations/analytics'
+import { formatCurrency } from '../../../lib/format'
 
 const BreakdownTable = () => {
   const { incomes, recurringExpenses, creditCards, oneTimeExpenses, projectionDays } = useFinancialContext()
@@ -18,12 +19,12 @@ const BreakdownTable = () => {
           return (
             <div key={name} className="flow-item income-item-flow">
               <div className="flow-label">{name}</div>
-              <div className="flow-amount">${amount.toFixed(0)} ({percentage}%)</div>
+              <div className="flow-amount">{formatCurrency(amount)} ({percentage}%)</div>
             </div>
           )
         })}
         <div className="flow-total">
-          Total Income: ${flowData.totalIncome.toFixed(0)}
+          Total Income: {formatCurrency(flowData.totalIncome)}
         </div>
       </div>
       
@@ -38,12 +39,12 @@ const BreakdownTable = () => {
           return (
             <div key={`${type}-${name}`} className={`flow-item expense-item-flow ${type}`}>
               <div className="flow-label">{name}</div>
-              <div className="flow-amount">${amount.toFixed(0)} ({percentage}%)</div>
+              <div className="flow-amount">{formatCurrency(amount)} ({percentage}%)</div>
             </div>
           )
         })}
         <div className="flow-total">
-          Total Expenses: ${flowData.totalExpenses.toFixed(0)}
+          Total Expenses: {formatCurrency(flowData.totalExpenses)}
         </div>
       </div>
     </div>

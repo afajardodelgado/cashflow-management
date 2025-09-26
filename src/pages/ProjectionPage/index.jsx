@@ -3,6 +3,7 @@ import CashflowChart from './components/CashflowChart'
 import ProjectionTable from './components/ProjectionTable'
 import { useCashflowCalculations } from '../../hooks/useCashflowCalculations'
 import { exportProjectionCSV } from '../../services/export/csv'
+import { formatCurrency, formatNegativeCurrency } from '../../lib/format'
 
 const ProjectionPage = () => {
   const {
@@ -31,7 +32,7 @@ const ProjectionPage = () => {
       <div className="balance-summary mb-md">
         <div className="metric-card">
           <div className="balance-label">Starting Balance</div>
-          <div className="balance-amount">${startingBalance.toFixed(2)}</div>
+          <div className="balance-amount">{formatCurrency(startingBalance)}</div>
         </div>
         <div className="metric-card">
           {(() => {
@@ -39,9 +40,7 @@ const ProjectionPage = () => {
             const month = estimated.date.getMonth() + 1
             const day = estimated.date.getDate()
             const shortDate = `${month}/${day}`
-            const balanceText = estimated.balance < 0 ? 
-              `($${Math.abs(estimated.balance).toFixed(2)})` : 
-              `$${estimated.balance.toFixed(2)}`
+            const balanceText = formatNegativeCurrency(estimated.balance)
             return (
               <>
                 <div className="balance-label">Estimated Balance on {shortDate}</div>

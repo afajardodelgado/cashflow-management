@@ -159,17 +159,18 @@ select {
   cursor: pointer;
   height: var(--control-height);
 }
-
 select:focus {
   outline: none;
   border-color: var(--primary-green);
 }
 
-/* Income Item Styling */
+/* Income/Expense item container */
 .income-item {
+  position: relative;
   border: 1px solid #E5E5E5;
   border-radius: 8px;
   padding: var(--space-md);
+  padding-bottom: 3.5rem; /* Extra space for toggle at bottom */
   background-color: #FAFAFA;
 }
 
@@ -186,6 +187,16 @@ select:focus {
   align-self: end;
   justify-self: end;
   height: var(--control-height);
+}
+
+/* Toggle wrapper - positioned in lower right corner */
+.income-item .toggle-wrapper {
+  position: absolute;
+  bottom: var(--space-md);
+  right: var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .income-item > .flex {

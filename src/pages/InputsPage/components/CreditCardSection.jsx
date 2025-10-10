@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { useFinancialContext } from '../../../context/FinancialContext'
 import { isValidName } from '../../../lib/validation'
+import ToggleSwitch from '../../../components/ToggleSwitch'
+import ConfirmDialog from '../../../components/ConfirmDialog'
 
 const CreditCardSection = () => {
   const { creditCards, addCreditCard, updateCreditCard, deleteCreditCard } = useFinancialContext()
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const handleUpdateCreditCard = (id, field, value) => {
     // Validate name field - reject purely numeric values
@@ -10,6 +14,21 @@ const CreditCardSection = () => {
       return // Don't update if name is purely numeric
     }
     updateCreditCard(id, { [field]: value })
+  }
+
+  const handleDeleteClick = (card) => {
+    setConfirmDelete(card)
+  }
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      deleteCreditCard(confirmDelete.id)
+      setConfirmDelete(null)
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setConfirmDelete(null)
   }
 
   return (
@@ -42,7 +61,7 @@ const CreditCardSection = () => {
             </div>
             <button 
               className="remove-btn" 
-              onClick={() => deleteCreditCard(card.id)}
+              onClick={() => handleDeleteClick(card)}
             >
               Remove
             </button>
@@ -66,6 +85,14 @@ const CreditCardSection = () => {
               />
             </div>
           </div>
+          <div className="toggle-wrapper">
+            <ToggleSwitch
+              id={`card-active-${card.id}`}
+              checked={card.isActive !== false}
+              onChange={(e) => handleUpdateCreditCard(card.id, 'isActive', e.target.checked)}
+              label="Active"
+            />
+          </div>
           {card.dueDate && card.payDate && new Date(card.payDate) > new Date(card.dueDate) && (
             <div className="alert-danger">
               Warning: Pay date is after due date - this may incur late fees!
@@ -86,6 +113,14 @@ const CreditCardSection = () => {
       >
         + Add Credit Card
       </button>
+
+      <ConfirmDialog
+        isOpen={confirmDelete !== null}
+        title="Confirm Removal"
+        message={`Are you sure you want to remove "${confirmDelete?.name || 'this credit card'}"?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   )
 }

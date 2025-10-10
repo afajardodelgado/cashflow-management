@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { useFinancialContext } from '../../../context/FinancialContext'
 import { isValidName } from '../../../lib/validation'
+import ToggleSwitch from '../../../components/ToggleSwitch'
+import ConfirmDialog from '../../../components/ConfirmDialog'
 
 const ExpenseSection = () => {
   const {
@@ -12,6 +15,9 @@ const ExpenseSection = () => {
     updateOneTimeExpense,
     deleteOneTimeExpense
   } = useFinancialContext()
+
+  const [confirmDeleteRecurring, setConfirmDeleteRecurring] = useState(null)
+  const [confirmDeleteOneTime, setConfirmDeleteOneTime] = useState(null)
 
   const handleUpdateRecurringExpense = (id, field, value) => {
     // Validate name field - reject purely numeric values
@@ -27,6 +33,36 @@ const ExpenseSection = () => {
       return // Don't update if name is purely numeric
     }
     updateOneTimeExpense(id, { [field]: value })
+  }
+
+  const handleDeleteRecurringClick = (expense) => {
+    setConfirmDeleteRecurring(expense)
+  }
+
+  const handleConfirmDeleteRecurring = () => {
+    if (confirmDeleteRecurring) {
+      deleteRecurringExpense(confirmDeleteRecurring.id)
+      setConfirmDeleteRecurring(null)
+    }
+  }
+
+  const handleCancelDeleteRecurring = () => {
+    setConfirmDeleteRecurring(null)
+  }
+
+  const handleDeleteOneTimeClick = (expense) => {
+    setConfirmDeleteOneTime(expense)
+  }
+
+  const handleConfirmDeleteOneTime = () => {
+    if (confirmDeleteOneTime) {
+      deleteOneTimeExpense(confirmDeleteOneTime.id)
+      setConfirmDeleteOneTime(null)
+    }
+  }
+
+  const handleCancelDeleteOneTime = () => {
+    setConfirmDeleteOneTime(null)
   }
 
   return (
@@ -60,7 +96,7 @@ const ExpenseSection = () => {
               </div>
               <button 
                 className="remove-btn" 
-                onClick={() => deleteRecurringExpense(expense.id)}
+                onClick={() => handleDeleteRecurringClick(expense)}
               >
                 Remove
               </button>
@@ -102,6 +138,14 @@ const ExpenseSection = () => {
                   onChange={(e) => handleUpdateRecurringExpense(expense.id, 'nextDueDate', e.target.value)}
                 />
               </div>
+            </div>
+            <div className="toggle-wrapper">
+              <ToggleSwitch
+                id={`rec-active-${expense.id}`}
+                checked={expense.isActive !== false}
+                onChange={(e) => handleUpdateRecurringExpense(expense.id, 'isActive', e.target.checked)}
+                label="Active"
+              />
             </div>
           </div>
         ))}
@@ -150,7 +194,7 @@ const ExpenseSection = () => {
               </div>
               <button 
                 className="remove-btn" 
-                onClick={() => deleteOneTimeExpense(expense.id)}
+                onClick={() => handleDeleteOneTimeClick(expense)}
               >
                 Remove
               </button>
@@ -179,6 +223,14 @@ const ExpenseSection = () => {
                 />
               </div>
             </div>
+            <div className="toggle-wrapper">
+              <ToggleSwitch
+                id={`ot-active-${expense.id}`}
+                checked={expense.isActive !== false}
+                onChange={(e) => handleUpdateOneTimeExpense(expense.id, 'isActive', e.target.checked)}
+                label="Active"
+              />
+            </div>
           </div>
         ))}
         
@@ -195,6 +247,22 @@ const ExpenseSection = () => {
           + Add One-Time Expense
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDeleteRecurring !== null}
+        title="Confirm Removal"
+        message={`Are you sure you want to remove "${confirmDeleteRecurring?.name || 'this recurring expense'}"?`}
+        onConfirm={handleConfirmDeleteRecurring}
+        onCancel={handleCancelDeleteRecurring}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmDeleteOneTime !== null}
+        title="Confirm Removal"
+        message={`Are you sure you want to remove "${confirmDeleteOneTime?.name || 'this one-time expense'}"?`}
+        onConfirm={handleConfirmDeleteOneTime}
+        onCancel={handleCancelDeleteOneTime}
+      />
     </>
   )
 }

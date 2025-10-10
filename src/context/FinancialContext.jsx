@@ -108,7 +108,7 @@ export const FinancialProvider = ({ children, user, isGuest, initialData = null,
   }, [user, initialData])
 
   const addIncome = useCallback((income) => {
-    setIncomes(prev => [...prev, { ...income, id: Date.now().toString() }])
+    setIncomes(prev => [...prev, { ...income, id: Date.now().toString(), isActive: income.isActive !== undefined ? income.isActive : true }])
   }, [])
 
   const updateIncome = useCallback((id, updates) => {
@@ -120,7 +120,7 @@ export const FinancialProvider = ({ children, user, isGuest, initialData = null,
   }, [])
 
   const addCreditCard = useCallback((card) => {
-    setCreditCards(prev => [...prev, { ...card, id: Date.now().toString() }])
+    setCreditCards(prev => [...prev, { ...card, id: Date.now().toString(), isActive: card.isActive !== undefined ? card.isActive : true }])
   }, [])
 
   const updateCreditCard = useCallback((id, updates) => {
@@ -132,7 +132,7 @@ export const FinancialProvider = ({ children, user, isGuest, initialData = null,
   }, [])
 
   const addRecurringExpense = useCallback((expense) => {
-    setRecurringExpenses(prev => [...prev, { ...expense, id: Date.now().toString() }])
+    setRecurringExpenses(prev => [...prev, { ...expense, id: Date.now().toString(), isActive: expense.isActive !== undefined ? expense.isActive : true }])
   }, [])
 
   const updateRecurringExpense = useCallback((id, updates) => {
@@ -144,7 +144,7 @@ export const FinancialProvider = ({ children, user, isGuest, initialData = null,
   }, [])
 
   const addOneTimeExpense = useCallback((expense) => {
-    setOneTimeExpenses(prev => [...prev, { ...expense, id: Date.now().toString() }])
+    setOneTimeExpenses(prev => [...prev, { ...expense, id: Date.now().toString(), isActive: expense.isActive !== undefined ? expense.isActive : true }])
   }, [])
 
   const updateOneTimeExpense = useCallback((id, updates) => {

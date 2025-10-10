@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { useFinancialContext } from '../../../context/FinancialContext'
 import { isValidName } from '../../../lib/validation'
+import ToggleSwitch from '../../../components/ToggleSwitch'
+import ConfirmDialog from '../../../components/ConfirmDialog'
 
 const IncomeSection = () => {
   const { incomes, addIncome, updateIncome, deleteIncome } = useFinancialContext()
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const handleUpdateIncome = (id, field, value) => {
     // Validate name field - reject purely numeric values
@@ -10,6 +14,21 @@ const IncomeSection = () => {
       return // Don't update if name is purely numeric
     }
     updateIncome(id, { [field]: value })
+  }
+
+  const handleDeleteClick = (income) => {
+    setConfirmDelete(income)
+  }
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      deleteIncome(confirmDelete.id)
+      setConfirmDelete(null)
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setConfirmDelete(null)
   }
 
   return (
@@ -50,7 +69,7 @@ const IncomeSection = () => {
             </div>
             <button 
               className="remove-btn" 
-              onClick={() => deleteIncome(income.id)}
+              onClick={() => handleDeleteClick(income)}
               aria-label={`Remove ${income.name || 'income source'}`}
             >
               Remove
@@ -81,6 +100,14 @@ const IncomeSection = () => {
               />
             </div>
           </div>
+          <div className="toggle-wrapper">
+            <ToggleSwitch
+              id={`income-active-${income.id}`}
+              checked={income.isActive !== false}
+              onChange={(e) => handleUpdateIncome(income.id, 'isActive', e.target.checked)}
+              label="Active"
+            />
+          </div>
         </div>
       ))}
       
@@ -96,6 +123,14 @@ const IncomeSection = () => {
       >
         + Add Income
       </button>
+
+      <ConfirmDialog
+        isOpen={confirmDelete !== null}
+        title="Confirm Removal"
+        message={`Are you sure you want to remove "${confirmDelete?.name || 'this income source'}"?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   )
 }

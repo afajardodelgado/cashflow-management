@@ -10,8 +10,11 @@ export const getFlowBreakdownData = (incomes, recurringExpenses, creditCards, on
   let totalIncome = 0
   let totalExpenses = 0
   
-  // Calculate income by source (simplified approach)
+  // Calculate income by source (only active items)
   incomes.forEach(income => {
+    // Skip if inactive
+    if (income.isActive === false) return
+    
     if (income.name && income.amount) {
       const occurrences = Math.floor(projectionDays / (
         income.frequency === 'weekly' ? 7 : 
@@ -24,8 +27,11 @@ export const getFlowBreakdownData = (incomes, recurringExpenses, creditCards, on
     }
   })
   
-  // Calculate recurring expenses by category
+  // Calculate recurring expenses by category (only active items)
   recurringExpenses.forEach(expense => {
+    // Skip if inactive
+    if (expense.isActive === false) return
+    
     if (expense.name && expense.category && expense.amount) {
       const occurrences = Math.floor(projectionDays / (
         expense.frequency === 'weekly' ? 7 : 
@@ -37,16 +43,22 @@ export const getFlowBreakdownData = (incomes, recurringExpenses, creditCards, on
     }
   })
   
-  // Calculate credit card expenses
+  // Calculate credit card expenses (only active items)
   creditCards.forEach(card => {
+    // Skip if inactive
+    if (card.isActive === false) return
+    
     if (card.name && card.balance) {
       creditCardExpenses[card.name] = card.balance
       totalExpenses += card.balance
     }
   })
   
-  // Calculate one-time expenses
+  // Calculate one-time expenses (only active items)
   oneTimeExpenses.forEach(expense => {
+    // Skip if inactive
+    if (expense.isActive === false) return
+    
     if (expense.name && expense.amount && expense.date) {
       const expenseDate = normalizeDate(expense.date)
       const today = normalizeDate(new Date())

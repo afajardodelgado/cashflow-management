@@ -91,8 +91,11 @@ export const calculateCashflow = (startingBalance, incomes, creditCards, recurri
     let dailyIncome = 0
     let dailyExpenses = 0
     
-    // Calculate income for this date
+    // Calculate income for this date (only active items)
     incomes.forEach(income => {
+      // Skip if inactive
+      if (income.isActive === false) return
+      
       if (income.nextPayDate && income.amount && income.frequency) {
         if (isPaymentDue(currentDate, income.nextPayDate, income.frequency)) {
           dailyIncome += income.amount
@@ -100,8 +103,11 @@ export const calculateCashflow = (startingBalance, incomes, creditCards, recurri
       }
     })
     
-    // Calculate recurring expenses for this date
+    // Calculate recurring expenses for this date (only active items)
     recurringExpenses.forEach(expense => {
+      // Skip if inactive
+      if (expense.isActive === false) return
+      
       if (expense.nextDueDate && expense.amount && expense.frequency) {
         if (isPaymentDue(currentDate, expense.nextDueDate, expense.frequency)) {
           dailyExpenses += expense.amount
@@ -109,8 +115,11 @@ export const calculateCashflow = (startingBalance, incomes, creditCards, recurri
       }
     })
     
-    // Calculate credit card payments (use payDate if provided, else dueDate)
+    // Calculate credit card payments (only active items)
     creditCards.forEach(card => {
+      // Skip if inactive
+      if (card.isActive === false) return
+      
       if (card.balance && (card.dueDate || card.payDate)) {
         const paymentDate = normalizeDate(card.payDate || card.dueDate)
         if (paymentDate && getEpochDay(currentDate) === getEpochDay(paymentDate)) {
@@ -119,8 +128,11 @@ export const calculateCashflow = (startingBalance, incomes, creditCards, recurri
       }
     })
     
-    // Calculate one-time expenses
+    // Calculate one-time expenses (only active items)
     oneTimeExpenses.forEach(expense => {
+      // Skip if inactive
+      if (expense.isActive === false) return
+      
       if (expense.date && expense.amount) {
         const expenseDate = normalizeDate(expense.date)
         if (expenseDate && getEpochDay(currentDate) === getEpochDay(expenseDate)) {

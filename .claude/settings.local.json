@@ -13,7 +13,8 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(cp:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: add shareable links feature and input validation\n\nShareable Links Feature:\n- Add ShareableLinkModal component for creating shareable links\n- Implement SharedView page for read-only cashflow viewing\n- Add shareableLinks Supabase service for link management\n- Create share button in navigation with link icon\n- Update FinancialContext to support read-only mode\n- Add react-router-dom for /shared/:shareId routing\n\nInput Validation:\n- Create validation utility library (src/lib/validation.js)\n- Add isValidName() to prevent purely numeric names\n- Implement validation in IncomeSection for income names\n- Implement validation in CreditCardSection for card names\n- Implement validation in ExpenseSection for expense names (both recurring and one-time)\n- Names must contain at least one non-numeric character\n\nUI/UX Improvements:\n- Add shareable link modal with copy-to-clipboard functionality\n- Display read-only indicator in shared views\n- Enhanced navigation with share button and icon\n- Comprehensive styling for modal and shared view components\n\nDocumentation:\n- Add SHAREABLE_LINKS_SETUP.md with implementation guide\n- Add SHAREABLE_LINKS_SUMMARY.md with feature overview\n- Document Supabase schema migrations for shareable_links table\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": []
   }

@@ -150,15 +150,89 @@ src/
 - `npm test`: Run all test suites
 - `npm run lint`: Code linting with ESLint
 
-## Git Workflow
-When the user says "OK we are in a good checkpoint", follow this workflow:
-0. **Present the plan**: Tell the user the plan and create a checklist of steps for approval
-1. **Run the application** (`npm run dev` or `npm run build`) to ensure it compiles correctly
-2. **Commit changes** with a descriptive message ending with the Claude signature
-3. **Merge to main**: Switch to main branch and merge the feature branch
-4. **Push to origin**: `git push origin main`
-5. **Clean up**: Delete the feature branch to keep repository clean
-6. **No pull requests needed** - this maintains a clean, linear git history
+## Design Standards & UI/UX Guidelines
+
+This file contains comprehensive specifications for:
+- Grid and Layout (Desktop & Mobile)
+- Typography (Pretendard font family)
+- Components (Buttons, Inputs, Navigation, etc.)
+- Colors and spacing
+- Common micro-experiences (Login, Sign Up, etc.)
+
+**Before implementing any UI/UX features, LLMs MUST review the design standards file to ensure compliance.**
+
+### 🚫 CRITICAL RULE: NO EMOJIS IN APPLICATION
+
+**NEVER use emojis in any UI/UX-facing code:**
+- ❌ No emojis in HTML
+- ❌ No emojis in JavaScript strings shown to users
+- ❌ No emojis in CSS content
+- ❌ No emojis in user-facing text
+- ❌ No emojis in buttons, labels, headings, or any visible content
+- ✅ Emojis are ONLY allowed in: code comments, commit messages, and this documentation file
+
+**If you see emojis in any UI/UX code, DELETE them immediately.**
+
+## Git Workflow - Branch, Merge, and Clean Protocol
+
+**⚠️ NO PULL REQUESTS**
+
+This project operates with a **branch → merge to main → delete branch** workflow. There is no code review process via Pull Requests at this stage.
+
+### 🔴 IMPORTANT: When to Trigger Git Workflow
+
+**DO NOT** automatically run git commands. **ONLY** execute the git workflow when the user explicitly indicates we're at a good stopping point, such as:
+- "OK we are at a good checkpoint"
+- "OK let's merge"
+- "Let's commit this"
+- "Push this up"
+- Any similar phrase indicating it's time to commit and merge
+
+### 🔴 IMPORTANT: Execute Git Commands ONE AT A TIME
+
+**NEVER** run multiple git commands in a single batch. Execute **ONE command at a time** and wait for confirmation before proceeding to the next. This allows for:
+- Verification at each step
+- Error handling between commands
+- User visibility into the process
+- Ability to stop if issues arise
+
+### Standard Git Workflow
+
+When working on new features or changes:
+
+1. **Create feature branch**: `git checkout -b feature-name`
+2. **Make changes and commit**: Work on your feature branch
+3. **WAIT for user signal** (e.g., "OK let's merge", "good checkpoint")
+4. **Execute git commands ONE AT A TIME:**
+   - Step 1: `git add .`
+   - Step 2: `git commit -m "descriptive message"`
+   - Step 3: `git checkout main`
+   - Step 4: `git merge feature-name`
+   - Step 5: `git push origin main`
+   - Step 6: `git branch -d feature-name`
+
+**Command Reference (execute ONE at a time):**
+```bash
+# Step 1: Stage changes
+git add .
+
+# Step 2: Commit with message
+git commit -m "descriptive message"
+
+# Step 3: Switch to main
+git checkout main
+
+# Step 4: Merge feature branch
+git merge feature-name
+
+# Step 5: Push to main
+git push origin main
+
+# Step 6: Delete local branch
+git branch -d feature-name
+```
+
+**Never create Pull Requests.** All code goes directly to main after local verification and branch cleanup.
 
 ## Context for Development
 When working on this codebase:
@@ -168,3 +242,4 @@ When working on this codebase:
 4. **Test thoroughly**: Use the existing test suites for mathematical validation
 5. **Follow existing patterns**: Use the established Context API patterns and component structure
 6. **Respect the philosophy**: Keep the focus on forward-looking, judgment-free financial planning
+7. **NO EMOJIS**: Never use emojis in any user-facing code (HTML, JS, CSS, text)

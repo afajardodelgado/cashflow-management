@@ -1,10 +1,11 @@
 import { useFinancialContext } from '../../../context/FinancialContext'
+import { isValidName } from '../../../lib/validation'
 
 const ExpenseSection = () => {
-  const { 
-    recurringExpenses, 
-    addRecurringExpense, 
-    updateRecurringExpense, 
+  const {
+    recurringExpenses,
+    addRecurringExpense,
+    updateRecurringExpense,
     deleteRecurringExpense,
     oneTimeExpenses,
     addOneTimeExpense,
@@ -13,10 +14,18 @@ const ExpenseSection = () => {
   } = useFinancialContext()
 
   const handleUpdateRecurringExpense = (id, field, value) => {
+    // Validate name field - reject purely numeric values
+    if (field === 'name' && !isValidName(value)) {
+      return // Don't update if name is purely numeric
+    }
     updateRecurringExpense(id, { [field]: value })
   }
 
   const handleUpdateOneTimeExpense = (id, field, value) => {
+    // Validate name field - reject purely numeric values
+    if (field === 'name' && !isValidName(value)) {
+      return // Don't update if name is purely numeric
+    }
     updateOneTimeExpense(id, { [field]: value })
   }
 

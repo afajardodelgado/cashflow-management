@@ -1,9 +1,14 @@
 import { useFinancialContext } from '../../../context/FinancialContext'
+import { isValidName } from '../../../lib/validation'
 
 const CreditCardSection = () => {
   const { creditCards, addCreditCard, updateCreditCard, deleteCreditCard } = useFinancialContext()
 
   const handleUpdateCreditCard = (id, field, value) => {
+    // Validate name field - reject purely numeric values
+    if (field === 'name' && !isValidName(value)) {
+      return // Don't update if name is purely numeric
+    }
     updateCreditCard(id, { [field]: value })
   }
 

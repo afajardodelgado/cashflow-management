@@ -11,18 +11,18 @@ export const useFinancialContext = () => {
   return context
 }
 
-export const FinancialProvider = ({ children, user, isGuest }) => {
-  const [startingBalance, setStartingBalance] = useState(0)
-  const [incomes, setIncomes] = useState([])
-  const [creditCards, setCreditCards] = useState([])
-  const [recurringExpenses, setRecurringExpenses] = useState([])
-  const [oneTimeExpenses, setOneTimeExpenses] = useState([])
-  const [projectionDays, setProjectionDays] = useState(90)
-  const [showTransactionDaysOnly, setShowTransactionDaysOnly] = useState(false)
-  const [activeTab, setActiveTab] = useState('inputs')
-  const [chartType, setChartType] = useState('line')
+export const FinancialProvider = ({ children, user, isGuest, initialData = null, readOnly = false }) => {
+  const [startingBalance, setStartingBalance] = useState(initialData?.startingBalance || 0)
+  const [incomes, setIncomes] = useState(initialData?.incomes || [])
+  const [creditCards, setCreditCards] = useState(initialData?.creditCards || [])
+  const [recurringExpenses, setRecurringExpenses] = useState(initialData?.recurringExpenses || [])
+  const [oneTimeExpenses, setOneTimeExpenses] = useState(initialData?.oneTimeExpenses || [])
+  const [projectionDays, setProjectionDays] = useState(initialData?.projectionDays || 90)
+  const [showTransactionDaysOnly, setShowTransactionDaysOnly] = useState(initialData?.showTransactionDaysOnly || false)
+  const [activeTab, setActiveTab] = useState(initialData?.activeTab || 'inputs')
+  const [chartType, setChartType] = useState(initialData?.chartType || 'line')
   const [saveStatus, setSaveStatus] = useState({ message: '', isSuccess: false, isLoading: false })
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(!initialData)
 
   const getCurrentState = useCallback(() => ({
     startingBalance,
@@ -77,6 +77,12 @@ export const FinancialProvider = ({ children, user, isGuest }) => {
   }, [user, getCurrentState])
 
   useEffect(() => {
+    // Skip loading if initialData is provided (shared view mode)
+    if (initialData) {
+      setIsLoading(false)
+      return
+    }
+
     const loadData = async () => {
       setIsLoading(true)
       const userId = user?.userId || null
@@ -99,7 +105,7 @@ export const FinancialProvider = ({ children, user, isGuest }) => {
     }
     
     loadData()
-  }, [user])
+  }, [user, initialData])
 
   const addIncome = useCallback((income) => {
     setIncomes(prev => [...prev, { ...income, id: Date.now().toString() }])
@@ -196,6 +202,7 @@ export const FinancialProvider = ({ children, user, isGuest }) => {
     isLoading,
     user,
     isGuest,
+    readOnly,
     handleManualSave,
     resetAllData,
     getCurrentState

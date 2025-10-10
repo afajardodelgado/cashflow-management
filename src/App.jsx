@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import { FinancialProvider, useFinancialContext } from './context/FinancialContext'
 import SupabaseAuthGuard from './components/SupabaseAuthGuard'
+import ShareableLinkModal from './components/ShareableLinkModal'
 import InputsPage from './pages/InputsPage'
 import ProjectionPage from './pages/ProjectionPage'
 import InsightsPage from './pages/InsightsPage'
@@ -13,86 +14,13 @@ function CashflowApp() {
     setActiveTab,
     projectionDays,
     saveStatus,
-    handleManualSave
+    handleManualSave,
+    user
   } = useFinancialContext()
 
-  const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   useAutoSave(2000)
-
-  const taglines = [
-    "No judgement, no API integration, no Plaid",
-    "We won't remind you how much you spent last summer",
-    "I don't care if 6 months ago you overdid it in St. Tropez",
-    "Don't care how many table services Plaid will remind you you have done 9 years ago",
-    "That vintage wine collection? Not our business.",
-    "We don't care about your art gallery splurges.",
-    "We won't mention the boat you bought drunk.",
-    "Those designer shoes from last spring? Forgotten.",
-    "We don't judge your DoorDash addiction.",
-    "Fresh start, fresh cash flow.",
-    "We're not your financial therapist.",
-    "Clean slate, dirty money welcome.",
-    "No receipts, no regrets, no reminders.",
-    "Your financial past can stay in therapy.",
-    "We don't do financial archaeology.",
-    "No transaction shaming since never.",
-    "We won't connect to your mistakes.",
-    "Your bank statements are safe from us.",
-    "No access to your financial trauma.",
-    "Overdid it in St. Tropez in 2017? We're not Plaid, we don't care.",
-    "Blew your savings in St. Tropez? We're not your bank app.",
-    "That St. Tropez summer of 2018? Not our circus, not our spreadsheet.",
-    "St. Tropez bottle service bills? We don't keep receipts.",
-    "Spent rent money in St. Tropez? We're not here to judge.",
-    "Your St. Tropez yacht week disaster? Ancient history.",
-    "Maxed out your cards in Mykonos? We're not Plaid, we don't remember.",
-    "Went broke in Ibiza? We're not your banking app.",
-    "That Coachella weekend that cost 3 months rent? We won't remind you.",
-    "Tulum ate your emergency fund? We don't do financial autopsies.",
-    "Your Miami boat party receipts? We don't sync with shame.",
-    "Aspen ski trip broke the bank? We're not Mint, we don't mention it.",
-    "That Cloud Nine champagne tab in Aspen? We won't bring it up.",
-    "Spent your bonus in Dubai? We're not keeping score.",
-    "Blew through savings in the Hamptons? We don't track regrets.",
-    "Casa de Campo golf week emptied your account? We won't mention it.",
-    "That Mayfair shopping spree? We're not your financial conscience.",
-    "Loro Piana summer walks cost more than most cars? We don't care.",
-    "Aspen powder days emptied your account? We won't remind you.",
-    "That Aspen weekend cost more than your car? We're not Plaid, we don't judge.",
-    "Spent Christmas money on Aspen lift tickets? Ancient history.",
-    "Aspen après-ski bills broke the bank? We don't keep receipts.",
-    "Your Aspen lodge weekend? We won't bring it up.",
-    "Your Bagatelle brunch bills? We don't keep tabs.",
-    "Dropped your rent money at Bagatelle? We're not your conscience.",
-    "That Bagatelle champagne parade from 2018? We won't mention it.",
-    "Seaspice ate your emergency fund? We don't do financial autopsies.",
-    "That Seaspice dinner cost more than your mortgage? We won't remind you.",
-    "Blew your savings on Seaspice weekends? We're not keeping track.",
-    "Your Seaspice yacht party receipts? Not our problem.",
-    "Medium Cool bottle service 2 months ago? We're not your transaction history.",
-    "That Soho House weekend destroyed your budget? We don't care.",
-    "Art Basel spending spree? We won't bring it up.",
-    "That designer handbag impulse buy? We're not Plaid, we don't care.",
-    "Invested in that friend's startup? We're not your transaction history.",
-    "Splurged on that watch collection? We're not Plaid, we're not counting."
-  ]
-
-  const getRandomTaglineIndex = () => {
-    return Math.floor(Math.random() * taglines.length)
-  }
-
-  useEffect(() => {
-    setCurrentTaglineIndex(getRandomTaglineIndex())
-  }, [])
-
-  useEffect(() => {
-    setCurrentTaglineIndex(getRandomTaglineIndex())
-  }, [activeTab])
-
-  useEffect(() => {
-    setCurrentTaglineIndex(getRandomTaglineIndex())
-  }, [projectionDays])
 
   const handleTabKeyDown = (event, tabName) => {
     const tabs = ['inputs', 'projection', 'insights', 'export-pdf']
@@ -176,6 +104,26 @@ function CashflowApp() {
         
         <div className="save-section">
           <button 
+            className="share-button"
+            onClick={() => setShowShareModal(true)}
+            title="Create shareable link"
+          >
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            Share
+          </button>
+          <button 
             className={`save-button ${saveStatus.isLoading ? 'loading' : ''} ${saveStatus.isSuccess ? 'success' : ''}`}
             onClick={handleManualSave}
             disabled={saveStatus.isLoading}
@@ -222,15 +170,11 @@ function CashflowApp() {
           </div>
         </div>
       )}
-      
-      <div className="tagline-footer">
-        <div className="tagline-subtitle">
-          It's about the next {projectionDays} days, judgement free cashflow
-        </div>
-        <div className="tagline-main">
-          {taglines[currentTaglineIndex]}
-        </div>
-      </div>
+
+      <ShareableLinkModal 
+        isOpen={showShareModal} 
+        onClose={() => setShowShareModal(false)} 
+      />
     </div>
   )
 }

@@ -1,9 +1,14 @@
 import { useFinancialContext } from '../../../context/FinancialContext'
+import { isValidName } from '../../../lib/validation'
 
 const IncomeSection = () => {
   const { incomes, addIncome, updateIncome, deleteIncome } = useFinancialContext()
 
   const handleUpdateIncome = (id, field, value) => {
+    // Validate name field - reject purely numeric values
+    if (field === 'name' && !isValidName(value)) {
+      return // Don't update if name is purely numeric
+    }
     updateIncome(id, { [field]: value })
   }
 
